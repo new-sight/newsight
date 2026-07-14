@@ -155,3 +155,22 @@ class SupabaseWriter:
         finally:
             if conn:
                 conn.close()
+
+    def exists_news(self, news_id: str) -> bool:
+        """
+        뉴스 기사 ID가 이미 Supabase 데이터베이스에 존재하는지 확인합니다.
+        """
+        select_query = "SELECT 1 FROM news WHERE id = %s LIMIT 1;"
+        conn = None
+        try:
+            conn = pg8000.dbapi.connect(**self.conn_params)
+            cursor = conn.cursor()
+            cursor.execute(select_query, (news_id,))
+            result = cursor.fetchone()
+            return result is not None
+        except Exception as e:
+            print(f"[SupabaseWriter] Error checking news existence: {e}")
+            return False
+        finally:
+            if conn:
+                conn.close()

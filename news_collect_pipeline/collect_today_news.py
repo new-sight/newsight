@@ -108,8 +108,14 @@ def main():
                     f"[파이프라인] 중복 제거 결과: {len(today_news)}개 중 {len(unique_news)}개 대표 기사 선정"
                 )
 
-                # 4) 각 고유 뉴스에 대해 상세 요약, 번역 및 온톨로지 정보 추출
+                 # 4) 각 고유 뉴스에 대해 상세 요약, 번역 및 온톨로지 정보 추출
                 for idx, news_item in enumerate(unique_news):
+                    # URL 기반 고유 UUID 생성 및 존재 여부 체크
+                    news_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, news_item["link"]))
+                    if sb_writer.exists_news(news_uuid):
+                        print(f"[파이프라인] 이미 저장된 뉴스이므로 건너뜀 (ID: {news_uuid}, 제목: {news_item['title']})")
+                        continue
+
                     print(f"\n--- [처리 중 {idx+1}/{len(unique_news)}] ---")
                     print(f"원본 제목: {news_item['title']}")
 
@@ -130,9 +136,6 @@ def main():
                         sentiment_score = 0.0
                     extracted_tags = gemma_result.get("tags") or []
                     extracted_relations = gemma_result.get("relations") or []
-
-                    # URL 기반 고유 UUID 생성
-                    news_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, news_item["link"]))
 
                     # Supabase 저장
                     sb_success = sb_writer.insert_news(
