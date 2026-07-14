@@ -75,18 +75,18 @@ class SupabaseWriter:
                 conn.close()
 
     def insert_news(
-        self, 
-        news_id: str, 
-        title: str, 
-        original_title: str, 
-        summary: str, 
+        self,
+        news_id: str,
+        title: str,
+        original_title: str,
+        summary: str,
         link: str,
         tags: list = None,
         pub_date: str = None,
         sentiment_score: float = None,
         country: str = None,
         category: str = None,
-        source: str = None
+        source: str = None,
     ) -> bool:
         """
         뉴스 기사 메타데이터를 Supabase 데이터베이스에 저장합니다.
@@ -94,13 +94,16 @@ class SupabaseWriter:
         # 1) 태그 리스트를 콤마 구분 문자열로 변환
         tags_str = ""
         if tags:
-            tags_str = ", ".join([t.get("master") or t.get("name") or "" for t in tags if t])
+            tags_str = ", ".join(
+                [t.get("master") or t.get("name") or "" for t in tags if t]
+            )
 
         # 2) 발행 날짜 문자열을 datetime 객체로 변환
         published_at = None
         if pub_date:
             try:
                 import email.utils
+
                 parsed = email.utils.parsedate_to_datetime(pub_date)
                 published_at = parsed.replace(tzinfo=None)
             except Exception as e:
@@ -126,7 +129,20 @@ class SupabaseWriter:
             cursor = conn.cursor()
             cursor.execute(
                 insert_query,
-                (news_id, title, original_title, summary, link, tags_str, published_at, sentiment_score, country, category, source, datetime.now()),
+                (
+                    news_id,
+                    title,
+                    original_title,
+                    summary,
+                    link,
+                    tags_str,
+                    published_at,
+                    sentiment_score,
+                    country,
+                    category,
+                    source,
+                    datetime.now(),
+                ),
             )
             conn.commit()
             print(f"[SupabaseWriter] News inserted successfully (ID: {news_id})")
@@ -139,21 +155,3 @@ class SupabaseWriter:
         finally:
             if conn:
                 conn.close()
-
-
-if __name__ == "__main__":
-    # 로컬 테스트용
-    import uuid
-
-    writer = SupabaseWriter()
-    test_id = str(uuid.uuid4())
-    writer.insert_news(
-        news_id=test_id,
-        title="테스트 번역 제목",
-        original_title="Test Original Title",
-        summary="이것은 Supabase 테스트용 요약입니다.",
-        link="https://example.com/test",
-        country="KOREA",
-        category="TECHNOLOGY",
-        source="Test Publisher",
-    )
