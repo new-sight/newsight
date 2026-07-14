@@ -1,0 +1,13 @@
+node_modules
+dist
+.turbo
+.env
+.env.local
+
+apps/api/build/
+apps/api/.gradle/
+apps/api/bin/
+*.class
+.settings/
+.classpath
+.project
