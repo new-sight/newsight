@@ -2,8 +2,8 @@ name: News Collection Pipeline
 
 on:
   schedule:
-    # 20분 주기 스케줄링 (cron: "*/20 * * * *")
-    - cron: '*/20 * * * *'
+    # 30분 주기 스케줄링 (cron: "*/30 * * * *")
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     # GitHub 웹 콘솔에서 수동 실행 가능하도록 지원
 
