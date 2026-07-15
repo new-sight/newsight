@@ -43,5 +43,6 @@ jobs:
           NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
           TARGET_COUNTRIES: ${{ secrets.TARGET_COUNTRIES }}
           TARGET_CATEGORIES: ${{ secrets.TARGET_CATEGORIES }}
+          TIMEZONE_OFFSET: 9
         run: |
           python news_collect_pipeline/collect_today_news.py

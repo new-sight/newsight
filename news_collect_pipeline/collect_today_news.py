@@ -2,7 +2,7 @@ import os
 import sys
 import uuid
 import email.utils
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 from scraper import GoogleNewsScraper
@@ -40,14 +40,18 @@ def main():
     sb_writer = SupabaseWriter()
     neo_writer = Neo4jWriter()
 
-    # 오늘 날짜 (UTC 기준 00:00:00 ~ 23:59:59)
-    today = datetime.now(timezone.utc)
+    # 타임존 설정 (기본값: KST (UTC+9))
+    tz_offset_hours = int(os.getenv("TIMEZONE_OFFSET", "9"))
+    local_tz = timezone(timedelta(hours=tz_offset_hours))
+
+    # 지정한 타임존 기준 오늘 날짜 계산 후 UTC로 변환하여 필터 범위 설정
+    today = datetime.now(local_tz)
     start_date_utc = datetime(
-        today.year, today.month, today.day, 0, 0, 0, tzinfo=timezone.utc
-    )
+        today.year, today.month, today.day, 0, 0, 0, tzinfo=local_tz
+    ).astimezone(timezone.utc)
     end_date_utc = datetime(
-        today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc
-    )
+        today.year, today.month, today.day, 23, 59, 59, tzinfo=local_tz
+    ).astimezone(timezone.utc)
 
     print(
         f"[설정] 오늘자 날짜 필터 범위: {start_date_utc.strftime('%Y-%m-%d %H:%M:%S %Z')} ~ {end_date_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}"
