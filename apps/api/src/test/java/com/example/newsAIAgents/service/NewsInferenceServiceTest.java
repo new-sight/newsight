@@ -147,18 +147,20 @@ public class NewsInferenceServiceTest {
     void testGenerateStockBriefing_regeneratesWhenCacheExpired() throws Exception {
         java.time.LocalDateTime expiredTime = java.time.LocalDateTime.now().minusMinutes(35);
         String cachedJson = "{\"created_at\":\"" + expiredTime.toString() + "\",\"track1\":[],\"track2\":[],\"track3\":[],\"track4\":[]}";
+        
         when(valueOperations.get(anyString())).thenReturn(cachedJson);
+        when(valueOperations.setIfAbsent(eq("stock_briefing:revalidating"), eq("true"), any(java.time.Duration.class))).thenReturn(true);
 
         when(neo4jClient.query(anyString()).fetch().all()).thenReturn(Collections.emptyList());
         when(neo4jClient.query(anyString()).bind(anyList()).to(anyString()).fetch().all()).thenReturn(Collections.emptyList());
 
         String result = newsInferenceService.generateStockBriefing();
 
-        verify(redisTemplate, times(1)).delete(eq("stock_briefing"));
+        // Stale 캐시를 즉시 반환해야 함
+        assertEquals(cachedJson, result);
         
-        Map<String, Object> resultMap = objectMapper.readValue(result, Map.class);
-        java.time.LocalDateTime newCreatedAt = java.time.LocalDateTime.parse((String) resultMap.get("created_at"));
-        org.junit.jupiter.api.Assertions.assertTrue(newCreatedAt.isAfter(expiredTime));
+        // 비동기 작업이 기동되어 결국 Neo4j 지식 그래프를 쿼리해야 함
+        verify(neo4jClient, timeout(1000).atLeastOnce()).query(anyString());
     }
 
     @Test

@@ -87,8 +87,10 @@ public class NewsInferenceService {
      */
     public String generateStockBriefing() {
         log.info("[Briefing Service] Redis 캐시 확인 시도");
+        String cachedBriefing = null;
+        boolean needsRevalidate = false;
         try {
-            String cachedBriefing = redisTemplate.opsForValue().get(REDIS_KEY_STOCK_BRIEFING);
+            cachedBriefing = redisTemplate.opsForValue().get(REDIS_KEY_STOCK_BRIEFING);
             if (cachedBriefing != null) {
                 try {
                     Map<String, Object> map = objectMapper.readValue(cachedBriefing, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
@@ -99,19 +101,61 @@ public class NewsInferenceService {
                             log.info("[Briefing Service] 유효한 Redis 캐시가 존재합니다. 캐시된 브리핑을 반환합니다. (생성시간: {})", createdAtStr);
                             return cachedBriefing;
                         } else {
-                            log.info("[Briefing Service] Redis 캐시가 생성된 지 30분이 초과하여 기존 캐시를 삭제하고 새로 생성합니다. (생성시간: {})", createdAtStr);
-                            redisTemplate.delete(REDIS_KEY_STOCK_BRIEFING);
+                            log.info("[Briefing Service] Redis 캐시가 30분을 초과했습니다. 기존 캐시를 즉시 반환하고 백그라운드에서 비동기 갱신을 실행합니다. (생성시간: {})", createdAtStr);
+                            needsRevalidate = true;
                         }
                     }
                 } catch (Exception parseEx) {
-                    log.warn("[Briefing Service] Redis 캐시 파싱 실패로 인해 캐시를 삭제하고 새로 만듭니다.", parseEx);
-                    redisTemplate.delete(REDIS_KEY_STOCK_BRIEFING);
+                    log.warn("[Briefing Service] Redis 캐시 파싱 실패로 인해 새로 생성합니다.", parseEx);
+                    needsRevalidate = true;
+                    cachedBriefing = null;
                 }
+            } else {
+                log.info("[Briefing Service] Redis 캐시가 존재하지 않아 동기로 최초 브리핑을 생성합니다.");
+                needsRevalidate = true;
             }
         } catch (Exception redisEx) {
-            log.error("[Briefing Service] Redis 접근 중 오류 발생 (예외 우회하여 계속 진행)", redisEx);
+            log.error("[Briefing Service] Redis 접근 중 오류 발생 (동기 생성 진행)", redisEx);
+            needsRevalidate = true;
         }
 
+        if (needsRevalidate) {
+            if (cachedBriefing != null) {
+                triggerBackgroundRevalidation();
+                return cachedBriefing;
+            } else {
+                return doGenerateBriefing();
+            }
+        }
+        return "{}";
+    }
+
+    private void triggerBackgroundRevalidation() {
+        String lockKey = "stock_briefing:revalidating";
+        try {
+            Boolean isLockAcquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "true", Duration.ofMinutes(5));
+            if (Boolean.TRUE.equals(isLockAcquired)) {
+                log.info("[Briefing Service] 백그라운드 브리핑 갱신 태스크를 기동합니다.");
+                java.util.concurrent.CompletableFuture.runAsync(() -> {
+                    try {
+                        doGenerateBriefing();
+                        log.info("[Briefing Service] 백그라운드 브리핑 갱신 완료");
+                    } catch (Exception e) {
+                        log.error("[Briefing Service] 백그라운드 브리핑 갱신 중 에러 발생", e);
+                    } finally {
+                        redisTemplate.delete(lockKey);
+                    }
+                });
+            } else {
+                log.info("[Briefing Service] 이미 백그라운드 갱신 작업이 진행 중이므로 추가 요청을 생략합니다.");
+            }
+        } catch (Exception e) {
+            log.error("[Briefing Service] 백그라운드 갱신 락 제어 실패 (비동기 즉시 강제 기동)", e);
+            java.util.concurrent.CompletableFuture.runAsync(this::doGenerateBriefing);
+        }
+    }
+
+    public String doGenerateBriefing() {
         log.info("[Briefing Service] Track 1 및 Track 2 알고리즘 분석 시작");
 
         // 1. [트랙 1: 현재 눈여겨볼 종목] 조회
@@ -151,47 +195,62 @@ public class NewsInferenceService {
         String track2Query = "CALL () { " +
                 "  /* 경로 1: 산업 낙수효과 */ " +
                 "  MATCH (f:News)-[:HAS_TAG]->(t:Tag) " +
-                "  WHERE f.createdAt >= datetime() - duration('P3D') " +
+                "  WHERE f.createdAt >= datetime() - duration('P7D') " +
                 "    AND f.sentimentScore > 0.4 " +
                 "  OPTIONAL MATCH (i:Industry) WHERE i.name = t.name " +
                 "  WITH f, i " +
                 "  WHERE i IS NOT NULL " +
                 "  MATCH (s:Stock)-[:BELONGS_TO]->(i) " +
                 "  WHERE NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
-                "  RETURN s, sum(f.sentimentScore) AS score1, 0.0 AS score2, 0.0 AS score3, collect(DISTINCT f.title) AS newsTitles " +
+                "  WITH s, f.sentimentScore * (1.0 / (coalesce(duration.inDays(f.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, f.title AS newsTitle " +
+                "  RETURN s, decayedScore AS score1, 0.0 AS score2, 0.0 AS score3, 0.0 AS score4, collect(DISTINCT newsTitle) AS newsTitles " +
                 " " +
                 "  UNION ALL " +
                 " " +
-                "  /* 경로 2: 공급망 및 제휴선 전이 */ " +
+                "  /* 경로 2: 공급망 및 제휴선 전이 (Tag 관계 추적 후 Stock 매칭) */ " +
                 "  MATCH (f:News)-[:HAS_TAG]->(t:Tag) " +
-                "  WHERE f.createdAt >= datetime() - duration('P3D') " +
+                "  WHERE f.createdAt >= datetime() - duration('P7D') " +
                 "    AND f.sentimentScore > 0.4 " +
-                "  OPTIONAL MATCH (bigCorp:Stock) WHERE bigCorp.name = t.name " +
-                "  WITH f, bigCorp " +
-                "  WHERE bigCorp IS NOT NULL " +
-                "  MATCH (s:Stock)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH]-(bigCorp) " +
-                "  WHERE NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
-                "  RETURN s, 0.0 AS score1, sum(f.sentimentScore) AS score2, 0.0 AS score3, collect(DISTINCT f.title) AS newsTitles " +
+                "  MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH]-(otherTag:Tag) " +
+                "  MATCH (s:Stock) WHERE s.name = otherTag.name AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  WITH s, r, f.sentimentScore * (1.0 / (coalesce(duration.inDays(f.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, f.title AS newsTitle " +
+                "  WITH s, decayedScore * (CASE WHEN type(r) IN ['SUBSIDIARY_OF', 'SUPPLIES_TO'] THEN 1.2 WHEN type(r) = 'PARTNER_WITH' THEN 1.5 ELSE 1.0 END) AS weightedScore, newsTitle " +
+                "  RETURN s, 0.0 AS score1, weightedScore AS score2, 0.0 AS score3, 0.0 AS score4, collect(DISTINCT newsTitle) AS newsTitles " +
                 " " +
                 "  UNION ALL " +
                 " " +
-                "  /* 경로 3: 경쟁사 반사이익 */ " +
+                "  /* 경로 3: 경쟁사 반사이익 (Tag 경쟁관계 추적 후 Stock 매핑) */ " +
                 "  MATCH (badNews:News)-[:HAS_TAG]->(t:Tag) " +
                 "  WHERE badNews.createdAt >= datetime() - duration('P1D') " +
                 "    AND badNews.sentimentScore < -0.4 " +
-                "  OPTIONAL MATCH (bigCorp:Stock) WHERE bigCorp.name = t.name " +
-                "  WITH badNews, bigCorp " +
-                "  WHERE bigCorp IS NOT NULL " +
-                "  MATCH (bigCorp)-[:COMPETE_WITH]-(s:Stock) " +
-                "  WHERE NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
-                "  RETURN s, 0.0 AS score1, 0.0 AS score2, sum(abs(badNews.sentimentScore)) AS score3, collect(DISTINCT badNews.title) AS newsTitles " +
+                "  MATCH (t)-[:COMPETE_WITH]-(otherTag:Tag) " +
+                "  MATCH (s:Stock) WHERE s.name = otherTag.name AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  WITH s, abs(badNews.sentimentScore) * (1.0 / (coalesce(duration.inDays(badNews.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, badNews.title AS newsTitle " +
+                "  RETURN s, 0.0 AS score1, 0.0 AS score2, decayedScore AS score3, 0.0 AS score4, collect(DISTINCT newsTitle) AS newsTitles " +
+                " " +
+                "  UNION ALL " +
+                " " +
+                "  /* 경로 4: 거시경제 영향 분석 */ " +
+                "  MATCH (f:News)-[:HAS_TAG]->(macroTag:Tag) " +
+                "  WHERE f.createdAt >= datetime() - duration('P7D') " +
+                "    AND f.sentimentScore > 0.4 " +
+                "    AND macroTag.name IN ['금리', '인플레이션', '환율', '유가', '관세', '무역전쟁', '경기침체', '국제유가', 'FOMC', '연준', 'Interest Rate', 'Inflation', 'Exchange Rate', 'Oil Price', 'Tariff', 'Trade War', 'Fed', 'Recession'] " +
+                "  MATCH (macroTag)-[:RELATED_TO]-(targetTag:Tag) " +
+                "  OPTIONAL MATCH (sDirect:Stock) WHERE sDirect.name = targetTag.name " +
+                "  OPTIONAL MATCH (i:Industry) WHERE i.name = targetTag.name " +
+                "  WITH f, sDirect, i " +
+                "  OPTIONAL MATCH (sInd:Stock)-[:BELONGS_TO]->(i) " +
+                "  WITH f, coalesce(sDirect, sInd) AS s " +
+                "  WHERE s IS NOT NULL AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  WITH s, f.sentimentScore * (1.0 / (coalesce(duration.inDays(f.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, f.title AS newsTitle " +
+                "  RETURN s, 0.0 AS score1, 0.0 AS score2, 0.0 AS score3, decayedScore AS score4, collect(DISTINCT newsTitle) AS newsTitles " +
                 "} " +
-                "WITH s, sum(score1) AS s1, sum(score2) AS s2, sum(score3) AS s3, collect(newsTitles) AS allTitles " +
+                "WITH s, sum(score1) AS s1, sum(score2) AS s2, sum(score3) AS s3, sum(score4) AS s4, collect(newsTitles) AS allTitles " +
                 "UNWIND allTitles AS titles " +
                 "UNWIND titles AS title " +
-                "WITH s, s1, s2, s3, collect(DISTINCT title) AS uniqueTitles " +
-                "RETURN s.name AS stockName, s.ticker AS ticker, (s1 + s2 + s3) AS totalScore, uniqueTitles " +
-                "ORDER BY totalScore DESC " +
+                "WITH s, s1, s2, s3, s4, collect(DISTINCT title) AS uniqueTitles " +
+                "RETURN s.name AS stockName, s.ticker AS ticker, (s1 + s2 + s3 + s4) AS totalScore, uniqueTitles " +
+                "ORDER BY totalScore DESC, rand() DESC " +
                 "LIMIT 5";
         java.util.Collection<Map<String, Object>> track2Raw = neo4jClient.query(track2Query)
                 .bind(track1Tickers).to("excludeTickers")
@@ -243,34 +302,51 @@ public class NewsInferenceService {
         String track4Query = "CALL () { " +
                 "  /* 경로 1: 산업 악재 낙수효과 */ " +
                 "  MATCH (badNews:News)-[:HAS_TAG]->(t:Tag) " +
-                "  WHERE badNews.createdAt >= datetime() - duration('P3D') " +
+                "  WHERE badNews.createdAt >= datetime() - duration('P7D') " +
                 "    AND badNews.sentimentScore < -0.4 " +
                 "  OPTIONAL MATCH (i:Industry) WHERE i.name = t.name " +
                 "  WITH badNews, i " +
                 "  WHERE i IS NOT NULL " +
                 "  MATCH (s:Stock)-[:BELONGS_TO]->(i) " +
                 "  WHERE NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
-                "  RETURN s, sum(abs(badNews.sentimentScore)) AS score1, 0.0 AS score2, collect(DISTINCT badNews.title) AS newsTitles " +
+                "  WITH s, abs(badNews.sentimentScore) * (1.0 / (coalesce(duration.inDays(badNews.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, badNews.title AS newsTitle " +
+                "  RETURN s, decayedScore AS score1, 0.0 AS score2, 0.0 AS score3, collect(DISTINCT newsTitle) AS newsTitles " +
                 " " +
                 "  UNION ALL " +
                 " " +
-                "  /* 경로 2: 공급망 및 제휴선 악재 전이 */ " +
+                "  /* 경로 2: 공급망 및 제휴선 악재 전이 (Tag 관계 추적 후 Stock 매칭) */ " +
                 "  MATCH (badNews:News)-[:HAS_TAG]->(t:Tag) " +
-                "  WHERE badNews.createdAt >= datetime() - duration('P3D') " +
+                "  WHERE badNews.createdAt >= datetime() - duration('P7D') " +
                 "    AND badNews.sentimentScore < -0.4 " +
-                "  OPTIONAL MATCH (bigCorp:Stock) WHERE bigCorp.name = t.name " +
-                "  WITH badNews, bigCorp " +
-                "  WHERE bigCorp IS NOT NULL " +
-                "  MATCH (s:Stock)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH]-(bigCorp) " +
-                "  WHERE NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
-                "  RETURN s, 0.0 AS score1, sum(abs(badNews.sentimentScore)) AS score2, collect(DISTINCT badNews.title) AS newsTitles " +
+                "  MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH]-(otherTag:Tag) " +
+                "  MATCH (s:Stock) WHERE s.name = otherTag.name AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  WITH s, r, abs(badNews.sentimentScore) * (1.0 / (coalesce(duration.inDays(badNews.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, badNews.title AS newsTitle " +
+                "  WITH s, decayedScore * (CASE WHEN type(r) IN ['SUBSIDIARY_OF', 'SUPPLIES_TO'] THEN 1.2 WHEN type(r) = 'PARTNER_WITH' THEN 1.5 ELSE 1.0 END) AS weightedScore, newsTitle " +
+                "  RETURN s, 0.0 AS score1, weightedScore AS score2, 0.0 AS score3, collect(DISTINCT newsTitle) AS newsTitles " +
+                " " +
+                "  UNION ALL " +
+                " " +
+                "  /* 경로 3: 거시경제 악재 영향 분석 */ " +
+                "  MATCH (badNews:News)-[:HAS_TAG]->(macroTag:Tag) " +
+                "  WHERE badNews.createdAt >= datetime() - duration('P7D') " +
+                "    AND badNews.sentimentScore < -0.4 " +
+                "    AND macroTag.name IN ['금리', '인플레이션', '환율', '유가', '관세', '무역전쟁', '경기침체', '국제유가', 'FOMC', '연준', 'Interest Rate', 'Inflation', 'Exchange Rate', 'Oil Price', 'Tariff', 'Trade War', 'Fed', 'Recession'] " +
+                "  MATCH (macroTag)-[:RELATED_TO]-(targetTag:Tag) " +
+                "  OPTIONAL MATCH (sDirect:Stock) WHERE sDirect.name = targetTag.name " +
+                "  OPTIONAL MATCH (i:Industry) WHERE i.name = targetTag.name " +
+                "  WITH badNews, sDirect, i " +
+                "  OPTIONAL MATCH (sInd:Stock)-[:BELONGS_TO]->(i) " +
+                "  WITH badNews, coalesce(sDirect, sInd) AS s " +
+                "  WHERE s IS NOT NULL AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  WITH s, abs(badNews.sentimentScore) * (1.0 / (coalesce(duration.inDays(badNews.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, badNews.title AS newsTitle " +
+                "  RETURN s, 0.0 AS score1, 0.0 AS score2, decayedScore AS score3, collect(DISTINCT newsTitle) AS newsTitles " +
                 "} " +
-                "WITH s, sum(score1) AS s1, sum(score2) AS s2, collect(newsTitles) AS allTitles " +
+                "WITH s, sum(score1) AS s1, sum(score2) AS s2, sum(score3) AS s3, collect(newsTitles) AS allTitles " +
                 "UNWIND allTitles AS titles " +
                 "UNWIND titles AS title " +
-                "WITH s, s1, s2, collect(DISTINCT title) AS uniqueTitles " +
-                "RETURN s.name AS stockName, s.ticker AS ticker, (s1 + s2) AS totalScore, uniqueTitles " +
-                "ORDER BY totalScore DESC " +
+                "WITH s, s1, s2, s3, collect(DISTINCT title) AS uniqueTitles " +
+                "RETURN s.name AS stockName, s.ticker AS ticker, (s1 + s2 + s3) AS totalScore, uniqueTitles " +
+                "ORDER BY totalScore DESC, rand() DESC " +
                 "LIMIT 10";
         java.util.Collection<Map<String, Object>> track4Raw = neo4jClient.query(track4Query)
                 .bind(track1And2And3Tickers).to("excludeTickers")
@@ -293,7 +369,7 @@ public class NewsInferenceService {
             }
         }
 
-        contextBuilder.append("\n### [트랙 2: 미래에 주목할 종목 (최근 3일 공급망, 산업 낙수효과 및 경쟁사 악재 역발상 수혜 기반)]\n");
+        contextBuilder.append("\n### [트랙 2: 미래에 주목할 종목 (최근 일주일 공급망, 산업 낙수효과 및 경쟁사 악재 역발상 수혜 기반)]\n");
         if (track2Result == null || track2Result.isEmpty()) {
             contextBuilder.append("- 미래에 주목할 종목 데이터가 Neo4j 지식 그래프 상에 존재하지 않습니다.\n");
         } else {
@@ -317,7 +393,7 @@ public class NewsInferenceService {
             }
         }
 
-        contextBuilder.append("\n### [트랙 4: 장기적인 악재 종목 (최근 3일 공급망 및 산업 악재 전이 기반)]\n");
+        contextBuilder.append("\n### [트랙 4: 장기적인 악재 종목 (최근 일주일 공급망 및 산업 악재 전이 기반)]\n");
         if (track4Result == null || track4Result.isEmpty()) {
             contextBuilder.append("- 장기적인 악재 종목 데이터가 Neo4j 지식 그래프 상에 존재하지 않습니다.\n");
         } else {
@@ -357,7 +433,7 @@ public class NewsInferenceService {
             "  \"track2\": [\n" +
             "    {\n" +
             "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"최근 3일간의 공급망 밸류체인 수혜, 산업 낙수효과 전이 또는 경쟁사 악재로 인한 반사이익 역발상에 따라 이 주식을 선정하게 된 상세 이유\"\n" +
+            "      \"reason\": \"최근 일주일간의 공급망 밸류체인 수혜, 산업 낙수효과 전이 또는 경쟁사 악재로 인한 반사이익 역발상에 따라 이 주식을 선정하게 된 상세 이유\"\n" +
             "    }\n" +
             "  ],\n" +
             "  \"track3\": [\n" +
@@ -369,7 +445,7 @@ public class NewsInferenceService {
             "  \"track4\": [\n" +
             "    {\n" +
             "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"최근 3일간의 산업 악재 낙수효과 또는 공급망 대기업의 악재 전이 영향으로 지금 당장 영향은 미미하나 향후 장기적으로 투자에 부정적 영향이 우려되어 선정한 상세 이유\"\n" +
+            "      \"reason\": \"최근 일주일간의 산업 악재 낙수효과 또는 공급망 대기업의 악재 전이 영향으로 지금 당장 영향은 미미하나 향후 장기적으로 투자에 부정적 영향이 우려되어 선정한 상세 이유\"\n" +
             "    }\n" +
             "  ]\n" +
             "}",

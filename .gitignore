@@ -25,6 +25,7 @@ bin/
 apps/api/build/
 apps/api/.gradle/
 apps/api/bin/
+apps/api/src/main/resources/application.properties
 
 # VS Code
 .vscode/

@@ -1,0 +1,36 @@
+# Neo4j AuraDB 접속 주소 및 계정 세팅
+spring.neo4j.uri=${NEO4J_URI:neo4j+ssc://1ef45301.databases.neo4j.io}
+spring.neo4j.authentication.username=${NEO4J_USERNAME:1ef45301}
+spring.neo4j.authentication.password=${NEO4J_PASSWORD}
+
+# 콘솔창 로깅 옵션
+logging.level.com.example.news=DEBUG
+spring.application.name=newsAIAgents
+
+# Ollama Cloud 및 구글 Gemma 4 지정
+ollama.cloud.url=${OLLAMA_API_URL:https://api.ollama.com}
+ollama.cloud.api-key=${OLLAMA_API_KEY}
+ollama.cloud.model=${OLLAMA_MODEL_NAME:gemma4:31b}
+
+# PostgreSQL 데이터베이스 접속 설정 (Supabase Connection Pooler)
+spring.datasource.url=${DATABASE_URL:jdbc:postgresql://aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require}
+spring.datasource.username=${DATABASE_USERNAME:postgres.rjtoalnqvrgsqmqcgrde}
+spring.datasource.password=${DATABASE_PASSWORD}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA 및 Hibernate 옵션
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# Redis 설정
+spring.data.redis.host=${REDIS_HOST:localhost}
+spring.data.redis.port=${REDIS_PORT:6379}
+
+# HikariCP 설정
+spring.datasource.hikari.max-lifetime=55000
+spring.datasource.hikari.keepalive-time=30000
+spring.datasource.hikari.validation-timeout=3000
+
+# Alpha Vantage API Key
+alphavantage.api.key=${ALPHAVANTAGE_API_KEY}

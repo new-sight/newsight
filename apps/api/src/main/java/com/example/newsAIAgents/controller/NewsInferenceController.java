@@ -36,4 +36,14 @@ public class NewsInferenceController {
         String briefingResult = newsInferenceService.generateStockBriefing();
         return ResponseEntity.ok(briefingResult);
     }
+
+    /**
+     * 캐시를 우회하고 Neo4j와 LLM을 즉시 호출하여 브리핑을 강제 생성 및 갱신한 결과를 즉시 반환합니다.
+     * 예: GET /api/news/briefing/force
+     */
+    @GetMapping(value = "/briefing/force", produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> forceGenerateStockBriefing() {
+        String briefingResult = newsInferenceService.doGenerateBriefing();
+        return ResponseEntity.ok(briefingResult);
+    }
 }
