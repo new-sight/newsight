@@ -1,8 +1,6 @@
 import os
 import sys
 import uuid
-import email.utils
-from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 from scraper import GoogleNewsScraper
@@ -42,12 +40,7 @@ def main():
     sb_writer = SupabaseWriter()
     neo_writer = Neo4jWriter()
 
-    # 7월 9, 10, 11, 12, 13일 발행된 뉴스만 수집하기 위한 날짜 범위 설정
-    start_date_utc = datetime(2026, 7, 9, 0, 0, 0, tzinfo=timezone.utc)
-    end_date_utc = datetime(2026, 7, 13, 23, 59, 59, tzinfo=timezone.utc)
-    print(
-        f"[설정] 날짜 필터 범위: {start_date_utc.strftime('%Y-%m-%d %H:%M:%S %Z')} ~ {end_date_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}"
-    )
+
 
     try:
         for country in target_countries:
@@ -62,46 +55,11 @@ def main():
                     )
                     continue
 
-                # 2) 최근 일주일(7일) 이내 기사만 날짜 필터링
-                weekly_news = []
-                for item in raw_news:
-                    pub_date_str = item.get("pubDate", "")
-                    if pub_date_str:
-                        try:
-                            parsed_date = email.utils.parsedate_to_datetime(
-                                pub_date_str
-                            )
-                            # 타임존이 없는 나이브 데이트타임 객체인 경우 UTC 부여
-                            if parsed_date.tzinfo is None:
-                                parsed_date = parsed_date.replace(tzinfo=timezone.utc)
-
-                            # 지정된 날짜 범위 내 여부 비교 (7월 9~13일)
-                            if start_date_utc <= parsed_date <= end_date_utc:
-                                weekly_news.append(item)
-                            else:
-                                # 범위 외 뉴스 제외 로그
-                                print(
-                                    f"[날짜 필터] 제외됨 (날짜 범위 외): {item['title']} (발행일: {pub_date_str})"
-                                )
-                        except Exception as e:
-                            # 날짜 파싱 오류 발생 시 안전하게 수집 목록에 포함
-                            print(f"[날짜 필터] 발행일 파싱 오류 (수집 포함): {e}")
-                            weekly_news.append(item)
-                    else:
-                        # 날짜 정보가 없는 경우 안전하게 포함
-                        weekly_news.append(item)
-
-                print(
-                    f"[파이프라인] 날짜 필터 결과: {len(raw_news)}개 중 {len(weekly_news)}개 기사 통과"
-                )
-                if not weekly_news:
-                    continue
-
-                # 3) 중복 기사 필터링 (LLM 활용)
+                # 2) 중복 기사 필터링 (LLM 활용)
                 print(f"[파이프라인] 중복 뉴스 필터링 진행 중...")
-                unique_news = llm_filter.filter_similar_news(weekly_news)
+                unique_news = llm_filter.filter_similar_news(raw_news)
                 print(
-                    f"[파이프라인] 중복 제거 결과: {len(weekly_news)}개 중 {len(unique_news)}개 대표 기사 선정"
+                    f"[파이프라인] 중복 제거 결과: {len(raw_news)}개 중 {len(unique_news)}개 대표 기사 선정"
                 )
 
                 # 4) 각 고유 뉴스에 대해 상세 요약, 번역 및 온톨로지 정보 추출

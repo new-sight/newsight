@@ -1,8 +1,6 @@
 import os
 import sys
 import uuid
-import email.utils
-from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 from scraper import GoogleNewsScraper
@@ -40,23 +38,6 @@ def main():
     sb_writer = SupabaseWriter()
     neo_writer = Neo4jWriter()
 
-    # 타임존 설정 (기본값: KST (UTC+9))
-    tz_offset_hours = int(os.getenv("TIMEZONE_OFFSET", "9"))
-    local_tz = timezone(timedelta(hours=tz_offset_hours))
-
-    # 지정한 타임존 기준 오늘 날짜 계산 후 UTC로 변환하여 필터 범위 설정
-    today = datetime.now(local_tz)
-    start_date_utc = datetime(
-        today.year, today.month, today.day, 0, 0, 0, tzinfo=local_tz
-    ).astimezone(timezone.utc)
-    end_date_utc = datetime(
-        today.year, today.month, today.day, 23, 59, 59, tzinfo=local_tz
-    ).astimezone(timezone.utc)
-
-    print(
-        f"[설정] 오늘자 날짜 필터 범위: {start_date_utc.strftime('%Y-%m-%d %H:%M:%S %Z')} ~ {end_date_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}"
-    )
-
     try:
         for country in target_countries:
             for category in categories:
@@ -70,54 +51,21 @@ def main():
                     )
                     continue
 
-                # 2) 오늘자 기사만 날짜 필터링
-                today_news = []
-                for item in raw_news:
-                    pub_date_str = item.get("pubDate", "")
-                    if pub_date_str:
-                        try:
-                            parsed_date = email.utils.parsedate_to_datetime(
-                                pub_date_str
-                            )
-                            # 타임존이 없는 나이브 데이트타임 객체인 경우 UTC 부여
-                            if parsed_date.tzinfo is None:
-                                parsed_date = parsed_date.replace(tzinfo=timezone.utc)
-
-                            # 지정된 날짜 범위 내 여부 비교 (오늘 하루)
-                            if start_date_utc <= parsed_date <= end_date_utc:
-                                today_news.append(item)
-                            else:
-                                # 범위 외 뉴스 제외 로그
-                                print(
-                                    f"[날짜 필터] 제외됨 (오늘 아님): {item['title']} (발행일: {pub_date_str})"
-                                )
-                        except Exception as e:
-                            # 날짜 파싱 오류 발생 시 오늘 기사로 가정해 안전하게 수집 목록에 포함
-                            print(f"[날짜 필터] 발행일 파싱 오류 (수집 포함): {e}")
-                            today_news.append(item)
-                    else:
-                        # 날짜 정보가 없는 경우 안전하게 포함
-                        today_news.append(item)
-
-                print(
-                    f"[파이프라인] 날짜 필터 결과: {len(raw_news)}개 중 {len(today_news)}개 기사 통과"
-                )
-                if not today_news:
-                    continue
-
-                # 3) 중복 기사 필터링 (LLM 활용)
+                # 2) 중복 기사 필터링 (LLM 활용)
                 print(f"[파이프라인] 중복 뉴스 필터링 진행 중...")
-                unique_news = llm_filter.filter_similar_news(today_news)
+                unique_news = llm_filter.filter_similar_news(raw_news)
                 print(
-                    f"[파이프라인] 중복 제거 결과: {len(today_news)}개 중 {len(unique_news)}개 대표 기사 선정"
+                    f"[파이프라인] 중복 제거 결과: {len(raw_news)}개 중 {len(unique_news)}개 대표 기사 선정"
                 )
 
-                 # 4) 각 고유 뉴스에 대해 상세 요약, 번역 및 온톨로지 정보 추출
+                # 4) 각 고유 뉴스에 대해 상세 요약, 번역 및 온톨로지 정보 추출
                 for idx, news_item in enumerate(unique_news):
                     # URL 기반 고유 UUID 생성 및 존재 여부 체크
                     news_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, news_item["link"]))
                     if sb_writer.exists_news(news_uuid):
-                        print(f"[파이프라인] 이미 저장된 뉴스이므로 건너뜀 (ID: {news_uuid}, 제목: {news_item['title']})")
+                        print(
+                            f"[파이프라인] 이미 저장된 뉴스이므로 건너뜀 (ID: {news_uuid}, 제목: {news_item['title']})"
+                        )
                         continue
 
                     print(f"\n--- [처리 중 {idx+1}/{len(unique_news)}] ---")
