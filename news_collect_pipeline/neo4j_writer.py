@@ -76,6 +76,11 @@ class Neo4jWriter:
                     if not master:
                         master = name
 
+                    # 주식 마스터 데이터와 연계 체크 (티커 또는 이름 기준)
+                    matched_stock_name = session.execute_read(self._lookup_stock_name, name, master)
+                    if matched_stock_name:
+                        master = matched_stock_name
+
                     # 마스터 태그 생성 및 동의어 처리
                     session.execute_write(self._create_tag_and_synonyms, name, master)
                     master_tags_in_news.add(master)
@@ -159,6 +164,24 @@ class Neo4jWriter:
             source=source,
             createdAt=created_at_iso,
         )
+
+    @staticmethod
+    def _lookup_stock_name(tx, name: str, master: str) -> str:
+        query = """
+        MATCH (s:Stock)
+        WHERE s.name = $name OR s.name = $master
+           OR s.ticker = $name OR s.ticker = $master
+           OR (s.ticker IS NOT NULL AND s.ticker CONTAINS '.' AND (
+               $name = split(s.ticker, '.')[0] OR $master = split(s.ticker, '.')[0]
+               OR (length($name) > 3 AND $name CONTAINS split(s.ticker, '.')[0])
+               OR (length($master) > 3 AND $master CONTAINS split(s.ticker, '.')[0])
+           ))
+        RETURN s.name AS stockName
+        LIMIT 1
+        """
+        result = tx.run(query, name=name, master=master)
+        record = result.single()
+        return record["stockName"] if record else None
 
     @staticmethod
     def _create_tag_and_synonyms(tx, name: str, master: str):
