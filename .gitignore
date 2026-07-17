@@ -36,3 +36,7 @@ apps/api/src/main/resources/application.properties
 **/.env.example
 __pycache__/
 *.py[cod]
+
+# Documentation & temporary texts
+*.md
+*.txt
