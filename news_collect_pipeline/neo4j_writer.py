@@ -173,8 +173,8 @@ class Neo4jWriter:
            OR s.ticker = $name OR s.ticker = $master
            OR (s.ticker IS NOT NULL AND s.ticker CONTAINS '.' AND (
                $name = split(s.ticker, '.')[0] OR $master = split(s.ticker, '.')[0]
-               OR (length($name) > 3 AND $name CONTAINS split(s.ticker, '.')[0])
-               OR (length($master) > 3 AND $master CONTAINS split(s.ticker, '.')[0])
+               OR (size($name) > 3 AND $name CONTAINS split(s.ticker, '.')[0])
+               OR (size($master) > 3 AND $master CONTAINS split(s.ticker, '.')[0])
            ))
         RETURN s.name AS stockName
         LIMIT 1
