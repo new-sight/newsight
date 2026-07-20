@@ -169,13 +169,14 @@ public class StockService {
      * 야후 파이낸스 API 호출 및 만료된 세션(401 발생 시)에 대한 자동 갱신 재시도 처리
      */
     private Map<String, Object> fetchQuoteWithRetry(String symbol, YahooSession session, int retryCount) throws Exception {
-        String urlStr = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + symbol + "&crumb=" + session.crumb;
+        String urlStr = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + symbol + "&crumb=" + session.crumb + "&lang=ko-KR&region=KR";
         URL url = java.net.URI.create(urlStr).toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         conn.setRequestProperty("User-Agent", USER_AGENT);
         conn.setRequestProperty("Cookie", session.cookie);
         conn.setRequestProperty("Accept", "application/json");
+        conn.setRequestProperty("Accept-Language", "ko-KR,ko;q=0.9");
 
         int responseCode = conn.getResponseCode();
         
