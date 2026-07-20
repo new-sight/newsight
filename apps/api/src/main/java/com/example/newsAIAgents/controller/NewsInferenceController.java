@@ -46,4 +46,14 @@ public class NewsInferenceController {
         String briefingResult = newsInferenceService.doGenerateBriefing();
         return ResponseEntity.ok(briefingResult);
     }
+
+    /**
+     * Neo4j에서 일주일치 연결된 데이터를 가져와 알고리즘 없이 Ollama를 통해 직접 4개 트랙 형식의 분석 보고서를 생성합니다.
+     * 예: GET /api/news/briefing/weekly-llm
+     */
+    @GetMapping(value = "/briefing/weekly-llm", produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getWeeklyBriefingWithoutAlgorithm() {
+        String briefingResult = newsInferenceService.generateWeeklyBriefingWithoutAlgorithm();
+        return ResponseEntity.ok(briefingResult);
+    }
 }

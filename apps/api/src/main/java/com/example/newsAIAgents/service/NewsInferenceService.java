@@ -82,6 +82,106 @@ public class NewsInferenceService {
     }
 
     /**
+     * Neo4j 지식 그래프에서 최근 7일(일주일) 동안 수집된 모든 뉴스, 관련 태그, 태그 간의 연결(관계), 
+     * 그리고 관련 주식 데이터를 조회하여 Ollama LLM을 통해 기존 4개 트랙 형식의 브리핑 보고서를 생성합니다.
+     */
+    public String generateWeeklyBriefingWithoutAlgorithm() {
+        log.info("[Weekly LLM Briefing] 최근 7일간의 지식 그래프 데이터 전체 조회 시작");
+
+        String query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE n.createdAt >= datetime() - duration('P7D') " +
+                "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
+                "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.name = otherTag.name " +
+                "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
+                "       s.name AS stockName, s.ticker AS stockTicker";
+
+        java.util.Collection<Map<String, Object>> rawResults = neo4jClient.query(query)
+                .fetch()
+                .all();
+        List<Map<String, Object>> graphData = new java.util.ArrayList<>(rawResults);
+
+        if (graphData == null || graphData.isEmpty()) {
+            log.warn("[Weekly LLM Briefing] 최근 일주일간 수집된 그래프 컨텍스트 데이터가 비어 있습니다.");
+            return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}");
+        }
+
+        // 2. 조회한 그래프 데이터를 LLM에 제공할 텍스트 포맷으로 포매팅
+        StringBuilder contextBuilder = new StringBuilder();
+        contextBuilder.append("=== [Neo4j 최근 7일 뉴스 & 태그 연결 지식 그래프 데이터] ===\n");
+        
+        for (int i = 0; i < graphData.size(); i++) {
+            Map<String, Object> row = graphData.get(i);
+            String newsTitle = (String) row.get("newsTitle");
+            String newsSummary = (String) row.get("newsSummary");
+            Double sentimentScore = null;
+            Object sentimentObj = row.get("sentimentScore");
+            if (sentimentObj instanceof Number) {
+                sentimentScore = ((Number) sentimentObj).doubleValue();
+            }
+            String tagName = (String) row.get("tagName");
+            String relationType = (String) row.get("relationType");
+            String relatedTagName = (String) row.get("relatedTagName");
+            String stockName = (String) row.get("stockName");
+            String stockTicker = (String) row.get("stockTicker");
+
+            contextBuilder.append(String.format("[%d] 뉴스: %s (감성 점수: %s)\n", i + 1, newsTitle, sentimentScore));
+            contextBuilder.append(String.format("    - 요약: %s\n", newsSummary));
+            contextBuilder.append(String.format("    - 연결 태그: %s\n", tagName));
+            if (relationType != null && relatedTagName != null) {
+                contextBuilder.append(String.format("    - 태그 관계: %s --[%s]--> %s\n", tagName, relationType, relatedTagName));
+            }
+            if (stockName != null && stockTicker != null) {
+                contextBuilder.append(String.format("    - 매칭 주식: %s (%s)\n", stockName, stockTicker));
+            }
+            contextBuilder.append("\n");
+        }
+
+        // 3. 프롬프트 작성
+        String currentDateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy년 M월 d일"));
+        String prompt = String.format(
+            "[System: You are an expert financial analyst. Analyze the provided Neo4j weekly news and tag relations context and return ONLY a valid JSON object matching the requested schema. No conversational text. Today's date is %s. " +
+            "CRITICAL WARNING: You are highly encouraged to recommend any publicly traded companies mentioned anywhere in the context (such as in news titles, summaries, tags, or relationships, e.g., 'Apple', 'Tesla', 'TSMC', 'Microsoft', 'AMD', 'ASML', 'Google', etc.). If a company's ticker is not explicitly provided in the context, you must infer the correct ticker symbol (e.g., AAPL for Apple, TSLA for Tesla, MSFT for Microsoft) and format it as '주식이름(주식코드)' in the 'stock' field. Do NOT recommend companies that are not mentioned in the context at all.]\n\n" +
+            "=== [Neo4j 일주일간의 뉴스 및 태그/주식 연결 정보 컨텍스트] ===\n" +
+            "%s\n\n" +
+            "위 연결 데이터를 심도 있게 분석하여, 다음 4가지 투자 관점의 트랙에 맞는 유망하거나 투자 주의가 필요한 종목들을 분류 및 선정하고 선정 이유를 명시한 JSON 형식으로 결과를 응답해줘. 만약 조건에 해당하는 종목이 없다면 빈 리스트를 응답해줘.\n" +
+            "반드시 다음 JSON 스키마 구조를 엄격하게 지켜서 응답해야 하며, 그 외의 다른 설명은 절대로 덧붙이지 마십시오:\n\n" +
+            "{\n" +
+            "  \"track1\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"최근 7일간의 호재 뉴스와 연결성, 그리고 모멘텀 지표 등에 따라 이 주식을 단기 모멘텀 종목으로 선정한 상세 이유\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"track2\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"공급망 관계(SUPPLIES_TO, PARTNER_WITH 등), 산업 낙수효과 전이 또는 경쟁사 악재 반사이익 수혜 등에 기초하여 향후 미래에 유망하다고 판단하여 선정한 상세 이유\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"track3\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"기사에 드러난 직접적인 악재나 부정적 이슈(음의 감성 점수)에 따라 단기적으로 투자를 주의해야 하는 상세 이유\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"track4\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"공급망 내 협력사나 산업 전반의 악재 전이 우려, 장기적인 경쟁력 약화 가능성에 따라 투자에 부정적 영향이 우려되어 선정한 상세 이유\"\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}",
+            currentDateStr,
+            contextBuilder.toString()
+        );
+
+        log.info("[Weekly LLM Briefing] Gemma 4 기반 브리핑 리포트 생성 요청 송신");
+        String rawBriefing = ollamaCloudService.queryGemma4ForReasoning(prompt);
+        return saveAndReturnBriefing(rawBriefing);
+    }
+
+    /**
      * Neo4j 지식 그래프에서 Track 1 및 Track 2 알고리즘 추천 종목을 추출하고,
      * 이를 가공하여 Ollama 로컬 LLM을 통해 애널리스트 톤의 마크다운 브리핑을 생성합니다.
      */
