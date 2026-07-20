@@ -14,7 +14,7 @@ TARGET_COUNTRIES = {
 }
 
 # 카테고리 정의 (Spring Boot의 NewsCategory 매핑)
-NEWS_CATEGORIES = ["HEADLINE", "BUSINESS", "TECHNOLOGY", "HEALTH"]
+NEWS_CATEGORIES = ["HEADLINE", "BUSINESS", "TECHNOLOGY", "SCIENCE", "HEALTH"]
 
 
 class GoogleNewsScraper:
