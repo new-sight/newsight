@@ -80,6 +80,7 @@ def migrate():
         UNWIND $batch AS row
         MERGE (s:Stock {ticker: row.stock_code})
         SET s.name = row.stock_name,
+            s.kor_name = row.stock_name,
             s.market = row.market_type
         
         WITH row, s

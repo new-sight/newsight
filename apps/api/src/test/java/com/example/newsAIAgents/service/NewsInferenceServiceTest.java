@@ -224,8 +224,10 @@ public class NewsInferenceServiceTest {
         mockRow.put("stockName", "NVIDIA Corp");
         mockRow.put("stockTicker", "NVDA");
 
-        when(neo4jClient.query(contains("duration('P7D')")).fetch().all())
+        when(neo4jClient.query(contains("duration('P1D')")).fetch().all())
                 .thenReturn(List.of(mockRow));
+        when(neo4jClient.query(contains("duration('P7D')")).fetch().all())
+                .thenReturn(Collections.emptyList());
 
         String expectedLlmResponse = "{\n" +
                 "  \"track1\": [{\"stock\": \"NVIDIA Corp(NVDA)\", \"reason\": \"nvda details\"}],\n" +

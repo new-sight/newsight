@@ -77,7 +77,9 @@ class Neo4jWriter:
                         master = name
 
                     # 주식 마스터 데이터와 연계 체크 (티커 또는 이름 기준)
-                    matched_stock_name = session.execute_read(self._lookup_stock_name, name, master)
+                    matched_stock_name = session.execute_read(
+                        self._lookup_stock_name, name, master
+                    )
                     if matched_stock_name:
                         master = matched_stock_name
 
@@ -170,18 +172,39 @@ class Neo4jWriter:
         query = """
         MATCH (s:Stock)
         WHERE s.name = $name OR s.name = $master
+           OR s.kor_name = $name OR s.kor_name = $master
            OR s.ticker = $name OR s.ticker = $master
            OR (s.ticker IS NOT NULL AND s.ticker CONTAINS '.' AND (
                $name = split(s.ticker, '.')[0] OR $master = split(s.ticker, '.')[0]
                OR (size($name) > 3 AND $name CONTAINS split(s.ticker, '.')[0])
                OR (size($master) > 3 AND $master CONTAINS split(s.ticker, '.')[0])
            ))
-        RETURN s.name AS stockName
+        RETURN s.name AS stockName, s.kor_name AS stockKorName, s.ticker AS ticker
         LIMIT 1
         """
         result = tx.run(query, name=name, master=master)
         record = result.single()
-        return record["stockName"] if record else None
+        if not record:
+            return None
+        
+        stock_name = record["stockName"]
+        stock_kor_name = record.get("stockKorName")
+        ticker = record["ticker"]
+        
+        # tag의 name이 한글이고 s.kor_name이 아직 한글이 아니거나 영어 사명과 같은 경우 업데이트 진행
+        import re
+        has_korean = lambda s: bool(re.search('[ㄱ-ㅎㅏ-ㅣ가-힣]', s)) if s else False
+        
+        if has_korean(name) and (not stock_kor_name or not has_korean(stock_kor_name) or stock_kor_name == stock_name):
+            update_query = """
+            MATCH (s:Stock {ticker: $ticker})
+            SET s.kor_name = $kor_name
+            """
+            tx.run(update_query, ticker=ticker, kor_name=name)
+            stock_kor_name = name
+            print(f"[Neo4jWriter] Dynamically updated Stock '{ticker}' kor_name to '{name}'")
+            
+        return stock_kor_name if stock_kor_name else stock_name
 
     @staticmethod
     def _create_tag_and_synonyms(tx, name: str, master: str):

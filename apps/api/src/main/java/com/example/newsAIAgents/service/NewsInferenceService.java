@@ -86,32 +86,118 @@ public class NewsInferenceService {
      * 그리고 관련 주식 데이터를 조회하여 Ollama LLM을 통해 기존 4개 트랙 형식의 브리핑 보고서를 생성합니다.
      */
     public String generateWeeklyBriefingWithoutAlgorithm() {
-        log.info("[Weekly LLM Briefing] 최근 7일간의 지식 그래프 데이터 전체 조회 시작");
+        log.info("[Weekly LLM Briefing] 각 트랙별 조건에 따른 Neo4j 지식 그래프 데이터 조회 시작");
 
-        String query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
-                "WHERE n.createdAt >= datetime() - duration('P7D') " +
+        // 1. 쿼리 실행 및 데이터 수집
+        // Track 1: 어제와 오늘의 호재 뉴스 (최근 1일 이내, 감성점수 >= 0.5)
+        String track1Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE n.createdAt >= datetime() - duration('P1D') AND n.sentimentScore >= 0.5 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
-                "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.name = otherTag.name " +
+                "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
-                "       s.name AS stockName, s.ticker AS stockTicker";
+                "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
+                "LIMIT 100";
+        List<Map<String, Object>> track1Data = new java.util.ArrayList<>(neo4jClient.query(track1Query).fetch().all());
 
-        java.util.Collection<Map<String, Object>> rawResults = neo4jClient.query(query)
-                .fetch()
-                .all();
-        List<Map<String, Object>> graphData = new java.util.ArrayList<>(rawResults);
+        // Track 2: 지난 일주일간 호재 뉴스 (최근 7일 이내, 감성점수 >= 0.4)
+        String track2Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE n.createdAt >= datetime() - duration('P7D') AND n.sentimentScore >= 0.4 " +
+                "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
+                "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
+                "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
+                "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
+                "LIMIT 100";
+        List<Map<String, Object>> track2Data = new java.util.ArrayList<>(neo4jClient.query(track2Query).fetch().all());
 
-        if (graphData == null || graphData.isEmpty()) {
-            log.warn("[Weekly LLM Briefing] 최근 일주일간 수집된 그래프 컨텍스트 데이터가 비어 있습니다.");
+        // Track 3: 어제와 오늘의 악재 뉴스 (최근 1일 이내, 감성점수 <= -0.5)
+        String track3Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE n.createdAt >= datetime() - duration('P1D') AND n.sentimentScore <= -0.5 " +
+                "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
+                "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
+                "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
+                "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
+                "LIMIT 100";
+        List<Map<String, Object>> track3Data = new java.util.ArrayList<>(neo4jClient.query(track3Query).fetch().all());
+
+        // Track 4: 지난 일주일간 악재 뉴스 (최근 7일 이내, 감성점수 <= -0.4)
+        String track4Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE n.createdAt >= datetime() - duration('P7D') AND n.sentimentScore <= -0.4 " +
+                "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
+                "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
+                "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
+                "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
+                "LIMIT 100";
+        List<Map<String, Object>> track4Data = new java.util.ArrayList<>(neo4jClient.query(track4Query).fetch().all());
+
+        if (track1Data.isEmpty() && track2Data.isEmpty() && track3Data.isEmpty() && track4Data.isEmpty()) {
+            log.warn("[Weekly LLM Briefing] 모든 트랙의 그래프 컨텍스트 데이터가 비어 있습니다.");
             return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}");
         }
 
         // 2. 조회한 그래프 데이터를 LLM에 제공할 텍스트 포맷으로 포매팅
         StringBuilder contextBuilder = new StringBuilder();
-        contextBuilder.append("=== [Neo4j 최근 7일 뉴스 & 태그 연결 지식 그래프 데이터] ===\n");
-        
-        for (int i = 0; i < graphData.size(); i++) {
-            Map<String, Object> row = graphData.get(i);
+        appendTrackContext(contextBuilder, "트랙 1: 어제와 오늘의 호재 뉴스 (감성점수 >= 0.5 기반 단기 모멘텀 분석)", track1Data);
+        appendTrackContext(contextBuilder, "트랙 2: 지난 일주일간의 호재 뉴스 (감성점수 >= 0.4 기반 중장기/공급망 분석)", track2Data);
+        appendTrackContext(contextBuilder, "트랙 3: 어제와 오늘의 악재 뉴스 (감성점수 <= -0.5 기반 단기 투자 위험 분석)", track3Data);
+        appendTrackContext(contextBuilder, "트랙 4: 지난 일주일간의 악재 뉴스 (감성점수 <= -0.4 기반 장기 리스크/공급망 전이 분석)", track4Data);
+
+        // 3. 프롬프트 작성
+        String currentDateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy년 M월 d일"));
+        String prompt = String.format(
+            "[System: You are an expert financial analyst. Analyze the provided Neo4j news and tag relations context categorized by tracks and return ONLY a valid JSON object matching the requested schema. No conversational text. Today's date is %s. " +
+            "CRITICAL REQUIREMENT: For each recommended stock, you must analyze and explicitly predict the specific market and stock ramifications/impact (미칠 파장, e.g., short/long-term stock price movement, supply chain consequences, competitive advantages/disadvantages) of the underlying news, and detail these details inside the 'reason' field of each JSON item. " +
+            "CRITICAL WARNING: You are highly encouraged to recommend any publicly traded companies mentioned anywhere in the context (such as in news titles, summaries, tags, or relationships, e.g., 'Apple', 'Tesla', 'TSMC', 'Microsoft', 'AMD', 'ASML', 'Google', etc.). If a company's ticker is not explicitly provided in the context, you must infer the correct ticker symbol (e.g., AAPL for Apple, TSLA for Tesla, MSFT for Microsoft) and format it as '주식이름(주식코드)' in the 'stock' field. Do NOT recommend companies that are not mentioned in the context at all.]\n\n" +
+            "=== [Neo4j 트랙별 뉴스 및 태그/주식 연결 정보 컨텍스트] ===\n" +
+            "%s\n\n" +
+            "위 연결 데이터를 각 트랙별 조건에 따라 심도 있게 분석하여, 다음 4가지 투자 관점의 트랙에 맞는 종목들을 분류 및 선정하고, 각 종목의 선정 이유에는 **특정 뉴스가 해당 주가 및 시장에 미칠 파장(단기/장기 주가 영향, 공급망 영향, 경쟁 구도 변화 등)을 구체적으로 예측하여** 명시한 JSON 형식으로 응답해줘. 만약 조건에 해당하는 종목이 없다면 빈 리스트를 응답해줘.\n" +
+            "반드시 다음 JSON 스키마 구조를 엄격하게 지켜서 응답해야 하며, 그 외의 다른 설명은 절대로 덧붙이지 마십시오:\n\n" +
+            "{\n" +
+            "  \"track1\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"어제와 오늘의 호재 뉴스 내용 및 태그 연결성을 서술하고, 이 뉴스가 단기적으로 주가에 미칠 파장(상승 모멘텀, 단기 수급 등)을 예측하여 상세히 서술\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"track2\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"지난 일주일간의 호재 뉴스 및 공급망/산업 관계를 서술하고, 이로 인해 중장기적으로 주가 및 산업 생태계에 미칠 파장(공급망 계약 효과, 시장 점유율 변화 등)을 예측하여 상세히 서술\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"track3\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"어제와 오늘의 악재 뉴스 및 위험 요소를 서술하고, 이 뉴스가 단기적으로 주가에 미칠 파장(급락 위험, 신용 리스크 등)을 예측하여 상세히 서술\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"track4\": [\n" +
+            "    {\n" +
+            "      \"stock\": \"주식이름(주식코드)\",\n" +
+            "      \"reason\": \"지난 일주일간의 악재 뉴스 및 경쟁사 호재로 인한 영향 등을 서술하고, 이 뉴스가 장기적으로 기업 가치 및 공급망 리스크에 미칠 파장(매출 타격, 제휴 해지 가능성 등)을 예측하여 상세히 서술\"\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}",
+            currentDateStr,
+            contextBuilder.toString()
+        );
+
+        log.info("[Weekly LLM Briefing] Gemma 4 기반 브리핑 리포트 생성 요청 송신");
+        String rawBriefing = ollamaCloudService.queryGemma4ForReasoning(prompt);
+        return saveAndReturnBriefing(rawBriefing);
+    }
+
+    private void appendTrackContext(StringBuilder builder, String trackTitle, List<Map<String, Object>> data) {
+        builder.append(String.format("=== [%s] ===\n", trackTitle));
+        if (data == null || data.isEmpty()) {
+            builder.append("- 해당 조건에 맞는 데이터가 존재하지 않습니다.\n\n");
+            return;
+        }
+        for (int i = 0; i < data.size(); i++) {
+            Map<String, Object> row = data.get(i);
             String newsTitle = (String) row.get("newsTitle");
             String newsSummary = (String) row.get("newsSummary");
             Double sentimentScore = null;
@@ -125,60 +211,17 @@ public class NewsInferenceService {
             String stockName = (String) row.get("stockName");
             String stockTicker = (String) row.get("stockTicker");
 
-            contextBuilder.append(String.format("[%d] 뉴스: %s (감성 점수: %s)\n", i + 1, newsTitle, sentimentScore));
-            contextBuilder.append(String.format("    - 요약: %s\n", newsSummary));
-            contextBuilder.append(String.format("    - 연결 태그: %s\n", tagName));
+            builder.append(String.format("[%d] 뉴스: %s (감성 점수: %s)\n", i + 1, newsTitle, sentimentScore));
+            builder.append(String.format("    - 요약: %s\n", newsSummary));
+            builder.append(String.format("    - 연결 태그: %s\n", tagName));
             if (relationType != null && relatedTagName != null) {
-                contextBuilder.append(String.format("    - 태그 관계: %s --[%s]--> %s\n", tagName, relationType, relatedTagName));
+                builder.append(String.format("    - 태그 관계: %s --[%s]--> %s\n", tagName, relationType, relatedTagName));
             }
             if (stockName != null && stockTicker != null) {
-                contextBuilder.append(String.format("    - 매칭 주식: %s (%s)\n", stockName, stockTicker));
+                builder.append(String.format("    - 매칭 주식: %s (%s)\n", stockName, stockTicker));
             }
-            contextBuilder.append("\n");
+            builder.append("\n");
         }
-
-        // 3. 프롬프트 작성
-        String currentDateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy년 M월 d일"));
-        String prompt = String.format(
-            "[System: You are an expert financial analyst. Analyze the provided Neo4j weekly news and tag relations context and return ONLY a valid JSON object matching the requested schema. No conversational text. Today's date is %s. " +
-            "CRITICAL WARNING: You are highly encouraged to recommend any publicly traded companies mentioned anywhere in the context (such as in news titles, summaries, tags, or relationships, e.g., 'Apple', 'Tesla', 'TSMC', 'Microsoft', 'AMD', 'ASML', 'Google', etc.). If a company's ticker is not explicitly provided in the context, you must infer the correct ticker symbol (e.g., AAPL for Apple, TSLA for Tesla, MSFT for Microsoft) and format it as '주식이름(주식코드)' in the 'stock' field. Do NOT recommend companies that are not mentioned in the context at all.]\n\n" +
-            "=== [Neo4j 일주일간의 뉴스 및 태그/주식 연결 정보 컨텍스트] ===\n" +
-            "%s\n\n" +
-            "위 연결 데이터를 심도 있게 분석하여, 다음 4가지 투자 관점의 트랙에 맞는 유망하거나 투자 주의가 필요한 종목들을 분류 및 선정하고 선정 이유를 명시한 JSON 형식으로 결과를 응답해줘. 만약 조건에 해당하는 종목이 없다면 빈 리스트를 응답해줘.\n" +
-            "반드시 다음 JSON 스키마 구조를 엄격하게 지켜서 응답해야 하며, 그 외의 다른 설명은 절대로 덧붙이지 마십시오:\n\n" +
-            "{\n" +
-            "  \"track1\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"최근 7일간의 호재 뉴스와 연결성, 그리고 모멘텀 지표 등에 따라 이 주식을 단기 모멘텀 종목으로 선정한 상세 이유\"\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"track2\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"공급망 관계(SUPPLIES_TO, PARTNER_WITH 등), 산업 낙수효과 전이 또는 경쟁사 악재 반사이익 수혜 등에 기초하여 향후 미래에 유망하다고 판단하여 선정한 상세 이유\"\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"track3\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"기사에 드러난 직접적인 악재나 부정적 이슈(음의 감성 점수)에 따라 단기적으로 투자를 주의해야 하는 상세 이유\"\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"track4\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"공급망 내 협력사나 산업 전반의 악재 전이 우려, 장기적인 경쟁력 약화 가능성에 따라 투자에 부정적 영향이 우려되어 선정한 상세 이유\"\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}",
-            currentDateStr,
-            contextBuilder.toString()
-        );
-
-        log.info("[Weekly LLM Briefing] Gemma 4 기반 브리핑 리포트 생성 요청 송신");
-        String rawBriefing = ollamaCloudService.queryGemma4ForReasoning(prompt);
-        return saveAndReturnBriefing(rawBriefing);
     }
 
     /**
@@ -266,12 +309,12 @@ public class NewsInferenceService {
                 "  AND f.createdAt >= datetime() - duration('P1D') " +
                 "OPTIONAL MATCH (t)-[:SYNONYM_OF]->(m:Tag) " +
                 "WITH f, d, coalesce(m, t) AS masterTag " +
-                "OPTIONAL MATCH (s:Stock) WHERE s.name = masterTag.name " +
+                "OPTIONAL MATCH (s:Stock) WHERE s.name = masterTag.name OR s.kor_name = masterTag.name " +
                 "WITH f, d, s " +
                 "WHERE s IS NOT NULL AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
                 "WITH s, count(d) AS d_count, sum(f.sentimentScore) AS f_sentiment_sum, " +
                 "     collect(DISTINCT f.title) AS foreignNewsTitles, collect(DISTINCT d.title) AS domesticNewsTitles " +
-                "RETURN s.name AS stockName, s.ticker AS ticker, (f_sentiment_sum * d_count) AS totalScore, " +
+                "RETURN coalesce(s.kor_name, s.name) AS stockName, s.ticker AS ticker, (f_sentiment_sum * d_count) AS totalScore, " +
                 "       foreignNewsTitles, domesticNewsTitles " +
                 "ORDER BY totalScore DESC " +
                 "LIMIT 10";
@@ -312,7 +355,7 @@ public class NewsInferenceService {
                 "  WHERE f.createdAt >= datetime() - duration('P7D') " +
                 "    AND f.sentimentScore > 0.4 " +
                 "  MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH]-(otherTag:Tag) " +
-                "  MATCH (s:Stock) WHERE s.name = otherTag.name AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  MATCH (s:Stock) WHERE (s.name = otherTag.name OR s.kor_name = otherTag.name) AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
                 "  WITH s, r, f.sentimentScore * (1.0 / (coalesce(duration.inDays(f.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, f.title AS newsTitle " +
                 "  WITH s, decayedScore * (CASE WHEN type(r) IN ['SUBSIDIARY_OF', 'SUPPLIES_TO'] THEN 1.2 WHEN type(r) = 'PARTNER_WITH' THEN 1.5 ELSE 1.0 END) AS weightedScore, newsTitle " +
                 "  RETURN s, 0.0 AS score1, weightedScore AS score2, 0.0 AS score3, 0.0 AS score4, collect(DISTINCT newsTitle) AS newsTitles " +
@@ -324,7 +367,7 @@ public class NewsInferenceService {
                 "  WHERE badNews.createdAt >= datetime() - duration('P1D') " +
                 "    AND badNews.sentimentScore < -0.4 " +
                 "  MATCH (t)-[:COMPETE_WITH]-(otherTag:Tag) " +
-                "  MATCH (s:Stock) WHERE s.name = otherTag.name AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  MATCH (s:Stock) WHERE (s.name = otherTag.name OR s.kor_name = otherTag.name) AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
                 "  WITH s, abs(badNews.sentimentScore) * (1.0 / (coalesce(duration.inDays(badNews.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, badNews.title AS newsTitle " +
                 "  RETURN s, 0.0 AS score1, 0.0 AS score2, decayedScore AS score3, 0.0 AS score4, collect(DISTINCT newsTitle) AS newsTitles " +
                 " " +
@@ -375,10 +418,10 @@ public class NewsInferenceService {
                 "  AND n.createdAt >= datetime() - duration('P1D') " +
                 "OPTIONAL MATCH (t)-[:SYNONYM_OF]->(m:Tag) " +
                 "WITH n, coalesce(m, t) AS masterTag " +
-                "MATCH (s:Stock) WHERE s.name = masterTag.name " +
+                "MATCH (s:Stock) WHERE s.name = masterTag.name OR s.kor_name = masterTag.name " +
                 "  AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
                 "WITH s, sum(abs(n.sentimentScore)) AS totalScore, collect(DISTINCT n.title) AS newsTitles " +
-                "RETURN s.name AS stockName, s.ticker AS ticker, totalScore, newsTitles " +
+                "RETURN coalesce(s.kor_name, s.name) AS stockName, s.ticker AS ticker, totalScore, newsTitles " +
                 "ORDER BY totalScore DESC " +
                 "LIMIT 10";
         java.util.Collection<Map<String, Object>> track3Raw = neo4jClient.query(track3Query)
@@ -419,7 +462,7 @@ public class NewsInferenceService {
                 "  WHERE badNews.createdAt >= datetime() - duration('P7D') " +
                 "    AND badNews.sentimentScore < -0.4 " +
                 "  MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH]-(otherTag:Tag) " +
-                "  MATCH (s:Stock) WHERE s.name = otherTag.name AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
+                "  MATCH (s:Stock) WHERE (s.name = otherTag.name OR s.kor_name = otherTag.name) AND NOT s.ticker IN $excludeTickers AND coalesce(s.is_active, true) = true AND s.ticker IS NOT NULL " +
                 "  WITH s, r, abs(badNews.sentimentScore) * (1.0 / (coalesce(duration.inDays(badNews.createdAt, datetime()).days, 0) + 1.0)) AS decayedScore, badNews.title AS newsTitle " +
                 "  WITH s, decayedScore * (CASE WHEN type(r) IN ['SUBSIDIARY_OF', 'SUPPLIES_TO'] THEN 1.2 WHEN type(r) = 'PARTNER_WITH' THEN 1.5 ELSE 1.0 END) AS weightedScore, newsTitle " +
                 "  RETURN s, 0.0 AS score1, weightedScore AS score2, 0.0 AS score3, collect(DISTINCT newsTitle) AS newsTitles " +
@@ -432,7 +475,7 @@ public class NewsInferenceService {
                 "    AND badNews.sentimentScore < -0.4 " +
                 "    AND macroTag.name IN ['금리', '인플레이션', '환율', '유가', '관세', '무역전쟁', '경기침체', '국제유가', 'FOMC', '연준', 'Interest Rate', 'Inflation', 'Exchange Rate', 'Oil Price', 'Tariff', 'Trade War', 'Fed', 'Recession'] " +
                 "  MATCH (macroTag)-[:RELATED_TO]-(targetTag:Tag) " +
-                "  OPTIONAL MATCH (sDirect:Stock) WHERE sDirect.name = targetTag.name " +
+                "  OPTIONAL MATCH (sDirect:Stock) WHERE sDirect.name = targetTag.name OR sDirect.kor_name = targetTag.name " +
                 "  OPTIONAL MATCH (i:Industry) WHERE i.name = targetTag.name " +
                 "  WITH badNews, sDirect, i " +
                 "  OPTIONAL MATCH (sInd:Stock)-[:BELONGS_TO]->(i) " +
@@ -445,7 +488,7 @@ public class NewsInferenceService {
                 "UNWIND allTitles AS titles " +
                 "UNWIND titles AS title " +
                 "WITH s, s1, s2, s3, collect(DISTINCT title) AS uniqueTitles " +
-                "RETURN s.name AS stockName, s.ticker AS ticker, (s1 + s2 + s3) AS totalScore, uniqueTitles " +
+                "RETURN coalesce(s.kor_name, s.name) AS stockName, s.ticker AS ticker, (s1 + s2 + s3) AS totalScore, uniqueTitles " +
                 "ORDER BY totalScore DESC, rand() DESC " +
                 "LIMIT 10";
         java.util.Collection<Map<String, Object>> track4Raw = neo4jClient.query(track4Query)
