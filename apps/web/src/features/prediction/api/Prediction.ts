@@ -12,7 +12,7 @@ export interface PredictionResponse {
 }
 
 export async function getPrediction(): Promise<PredictionResponse> {
-  const response = await fetch("http://54.180.105.81/api/news/briefing");
+  const response = await fetch("http://43.201.107.136/api/news/briefing");
 
   if (!response.ok) {
     throw new Error("주식 예측 데이터를 불러오지 못했습니다.");
