@@ -56,4 +56,15 @@ public class NewsInferenceController {
         String briefingResult = newsInferenceService.generateWeeklyBriefingWithoutAlgorithm();
         return ResponseEntity.ok(briefingResult);
     }
+
+    /**
+     * 특정 주식코드와 관련된 뉴스 ID 리스트를 Neo4j에서 조회합니다.
+     * 예: GET /api/news/list/AAPL
+     */
+    @GetMapping("/list/{stockCode}")
+    public ResponseEntity<java.util.List<String>> getNewsIdsByStockCode(
+            @org.springframework.web.bind.annotation.PathVariable("stockCode") String stockCode) {
+        java.util.List<String> newsIds = newsInferenceService.getNewsIdsByStockCode(stockCode);
+        return ResponseEntity.ok(newsIds);
+    }
 }

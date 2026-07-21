@@ -576,6 +576,36 @@ public class NewsInferenceService {
         return resultJson;
     }
 
+    /**
+     * 특정 주식코드와 관련된 뉴스 ID 리스트를 Neo4j에서 조회합니다.
+     */
+    public java.util.List<String> getNewsIdsByStockCode(String stockCode) {
+        String cypherQuery = "MATCH (s:Stock {ticker: $stockCode}) " +
+                "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE t.name = s.name OR t.name = s.kor_name OR t.name = s.ticker " +
+                "   OR EXISTS { " +
+                "       MATCH (t)-[:SYNONYM_OF]-(other:Tag) " +
+                "       WHERE other.name = s.name OR other.name = s.kor_name OR other.name = s.ticker " +
+                "   } " +
+                "RETURN DISTINCT n.id AS newsId";
+        
+        java.util.Collection<Map<String, Object>> result = neo4jClient.query(cypherQuery)
+                .bind(stockCode).to("stockCode")
+                .fetch()
+                .all();
+        
+        java.util.List<String> newsIds = new java.util.ArrayList<>();
+        if (result != null) {
+            for (Map<String, Object> record : result) {
+                String newsId = (String) record.get("newsId");
+                if (newsId != null) {
+                    newsIds.add(newsId);
+                }
+            }
+        }
+        return newsIds;
+    }
+
     private String cleanJsonString(String rawJson) {
         if (rawJson == null) {
             return "";

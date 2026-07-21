@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import axios from "axios";
 
 export interface StockInfoData {
   symbol?: string;
@@ -46,14 +47,10 @@ export function useGetStockInfo(stockCode: string | null | undefined) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
+      const response = await axios.get<StockInfoData>(
         `http://localhost:8080/api/stock/info/${stockCode}`,
       );
-      console.log(`[useGetStockInfo] HTTP Response Status: ${response.status}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result: StockInfoData = await response.json();
+      const result = response.data;
       console.log("[useGetStockInfo] Received result:", result);
       if (result.error) {
         console.warn(`[useGetStockInfo] API error returned: ${result.error}`);
@@ -64,10 +61,12 @@ export function useGetStockInfo(stockCode: string | null | undefined) {
       }
     } catch (err: unknown) {
       console.error("[useGetStockInfo] Fetch exception:", err);
-      const errMsg =
-        err instanceof Error
-          ? err.message
-          : "주식 정보를 가져오는데 실패했습니다.";
+      let errMsg = "주식 정보를 가져오는데 실패했습니다.";
+      if (axios.isAxiosError(err)) {
+        errMsg = err.response?.data?.message || err.message;
+      } else if (err instanceof Error) {
+        errMsg = err.message;
+      }
       setError(errMsg);
       setData(null);
     } finally {
