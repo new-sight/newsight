@@ -4,7 +4,6 @@ spring.neo4j.authentication.username=${NEO4J_USERNAME:1ef45301}
 spring.neo4j.authentication.password=${NEO4J_PASSWORD}
 
 # 콘솔창 로깅 옵션
-logging.level.com.example.news=DEBUG
 spring.application.name=newsAIAgents
 
 # Ollama Cloud 및 구글 Gemma 4 지정
@@ -31,6 +30,3 @@ spring.data.redis.port=${REDIS_PORT:6379}
 spring.datasource.hikari.max-lifetime=55000
 spring.datasource.hikari.keepalive-time=30000
 spring.datasource.hikari.validation-timeout=3000
-
-# Alpha Vantage API Key
-alphavantage.api.key=${ALPHAVANTAGE_API_KEY}

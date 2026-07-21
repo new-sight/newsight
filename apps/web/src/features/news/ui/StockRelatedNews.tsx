@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import useGetStockNews from "../hooks/GetStockNews";
 import NewsItem from "./stockInfo/components/NewsItem";
@@ -9,10 +9,11 @@ export default function StockRelatedNews() {
   const [currentPage, setCurrentPage] = useState(1);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Reset page when stock code changes
-  useEffect(() => {
+  const [prevStockCode, setPrevStockCode] = useState(stockCode);
+  if (stockCode !== prevStockCode) {
+    setPrevStockCode(stockCode);
     setCurrentPage(1);
-  }, [stockCode]);
+  }
 
   if (loading) {
     return (
