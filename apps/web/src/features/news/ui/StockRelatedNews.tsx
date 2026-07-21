@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import useGetStockNews from "../hooks/GetStockNews";
 import NewsItem from "./stockInfo/components/NewsItem";
@@ -5,6 +6,13 @@ import NewsItem from "./stockInfo/components/NewsItem";
 export default function StockRelatedNews() {
   const { stockCode } = useParams<{ stockCode: string }>();
   const { newsList, loading, error } = useGetStockNews(stockCode);
+  const [currentPage, setCurrentPage] = useState(1);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Reset page when stock code changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [stockCode]);
 
   if (loading) {
     return (
@@ -39,11 +47,74 @@ export default function StockRelatedNews() {
     );
   }
 
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(newsList.length / itemsPerPage);
+
+  // Get current page news
+  const displayedNews = newsList.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Smooth scroll the parent scrollable container to top
+    const scrollContainer = listRef.current?.closest(".overflow-y-auto");
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      {newsList.map((news) => (
-        <NewsItem key={news.id} news={news} />
-      ))}
+    <div ref={listRef} className="flex flex-col gap-6 pb-8">
+      {/* News List */}
+      <div className="flex flex-col gap-4">
+        {displayedNews.map((news) => (
+          <NewsItem key={news.id} news={news} />
+        ))}
+      </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-2 shrink-0">
+          {/* Previous Page Button */}
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="w-9 h-9 bg-bg-panel/40 hover:bg-bg-panel/80 disabled:opacity-20 border border-border/80 hover:border-accent/40 rounded-xl text-text hover:text-white transition-all disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[20px] select-none">
+              chevron_left
+            </span>
+          </button>
+
+          {/* Page Numbers */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={`w-9 h-9 font-sans text-xs font-semibold rounded-xl border transition-all cursor-pointer flex items-center justify-center shadow-sm ${
+                currentPage === page
+                  ? "bg-accent border-accent text-white font-bold shadow-md shadow-accent/20"
+                  : "bg-bg-panel/40 hover:bg-bg-panel/80 border-border/80 hover:border-accent/40 text-text-muted hover:text-white"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          {/* Next Page Button */}
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="w-9 h-9 bg-bg-panel/40 hover:bg-bg-panel/80 disabled:opacity-20 border border-border/80 hover:border-accent/40 rounded-xl text-text hover:text-white transition-all disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[20px] select-none">
+              chevron_right
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

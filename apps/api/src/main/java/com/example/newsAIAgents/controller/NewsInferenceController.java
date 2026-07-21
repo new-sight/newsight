@@ -58,13 +58,13 @@ public class NewsInferenceController {
     }
 
     /**
-     * 특정 주식코드와 관련된 뉴스 ID 리스트를 Neo4j에서 조회합니다.
+     * 특정 주식코드와 관련된 뉴스 상세 리스트를 조회합니다. (Neo4j에서 ID 탐색 후 PostgreSQL에서 JPA로 세부 정보 일괄 조회)
      * 예: GET /api/news/list/AAPL
      */
     @GetMapping("/list/{stockCode}")
-    public ResponseEntity<java.util.List<String>> getNewsIdsByStockCode(
+    public ResponseEntity<java.util.List<com.example.newsAIAgents.domain.NewsEntity>> getNewsDetailsByStockCode(
             @org.springframework.web.bind.annotation.PathVariable("stockCode") String stockCode) {
-        java.util.List<String> newsIds = newsInferenceService.getNewsIdsByStockCode(stockCode);
-        return ResponseEntity.ok(newsIds);
+        java.util.List<com.example.newsAIAgents.domain.NewsEntity> newsList = newsInferenceService.getNewsDetailsByStockCode(stockCode);
+        return ResponseEntity.ok(newsList);
     }
 }

@@ -27,45 +27,11 @@ export function useGetStockNews(stockCode: string | null | undefined) {
     setLoading(true);
     setError(null);
     try {
-      // 1. Get news IDs associated with the stock from Spring Boot API
-      const idResponse = await axios.get<string[]>(
+      // Get news list with details from Spring Boot API (queries Neo4j and JPA under the hood)
+      const response = await axios.get<NewsItemData[]>(
         `http://localhost:8080/api/news/list/${stockCode}`,
       );
-      const newsIds = idResponse.data;
-
-      if (!newsIds || newsIds.length === 0) {
-        setNewsList([]);
-        return;
-      }
-
-      // 2. Fetch full details from Supabase using environment variables
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error(
-          "Supabase environment variables (VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY) are missing.",
-        );
-      }
-
-      // Format IDs to postgrest IN filter: (id1,id2,id3)
-      const idsParam = `(${newsIds.join(",")})`;
-      const selectFields =
-        "id,title,summary,link,tags,published_at,sentiment_score,source";
-
-      const supabaseResponse = await axios.get<NewsItemData[]>(
-        `${supabaseUrl}/rest/v1/news?id=in.${idsParam}&select=${selectFields}&order=published_at.desc`,
-        {
-          headers: {
-            apikey: supabaseAnonKey,
-            Authorization: `Bearer ${supabaseAnonKey}`,
-            Accept: "application/json",
-          },
-        },
-      );
-
-      const details = supabaseResponse.data;
-      setNewsList(details);
+      setNewsList(response.data);
     } catch (err: unknown) {
       console.error("[useGetStockNews] Error fetching news:", err);
       let errMsg = "뉴스 데이터를 불러오지 못했습니다.";
