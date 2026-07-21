@@ -37,6 +37,7 @@ public class OllamaCloudService {
         WebClient webClient = WebClient.builder()
                 .baseUrl(cloudUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
+                .defaultHeader("Content-Type", "application/json;charset=UTF-8")
                 .build();
 
         Map<String, Object> requestBody = new java.util.HashMap<>();
@@ -45,6 +46,14 @@ public class OllamaCloudService {
         requestBody.put("stream", false);
         requestBody.put("format", "json");
         requestBody.put("options", Map.of("temperature", 0.1));
+
+        try {
+            String jsonPayload = objectMapper.writeValueAsString(requestBody);
+            log.info("[Ollama Cloud] Request JSON payload length: {}, preview: {}", 
+                     jsonPayload.length(), jsonPayload.substring(0, Math.min(jsonPayload.length(), 1000)));
+        } catch (Exception ex) {
+            log.error("[Ollama Cloud] Failed to serialize request body to string", ex);
+        }
 
         try {
             Map<String, Object> response = webClient.post()
@@ -72,8 +81,23 @@ public class OllamaCloudService {
             }
 
             return message.get("content").toString().trim();
+        } catch (org.springframework.web.reactive.function.client.WebClientResponseException e) {
+            String errorBody = e.getResponseBodyAsString();
+            log.error("[Gemma 4 Error] WebClient Response Error. Status: {}, Body: {}", e.getStatusCode(), errorBody, e);
+            return "추론 질의 실패 (Gemma 4 API 통신 장애): [" + e.getStatusCode() + "] " + errorBody;
         } catch (Exception e) {
-            log.error("[Gemma 4 Error] 추론 질의 도중 예외가 발생했습니다.", e);
+            log.error("[Gemma 4 Error] 추론 질의 도중 예외가 발생했습니다. Class: {}", e.getClass().getName(), e);
+            Throwable temp = e;
+            while (temp != null) {
+                if (temp instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
+                    org.springframework.web.reactive.function.client.WebClientResponseException wcre = 
+                        (org.springframework.web.reactive.function.client.WebClientResponseException) temp;
+                    String errorBody = wcre.getResponseBodyAsString();
+                    log.error("[Gemma 4 Error] Unpacked API Response Error Body: {}", errorBody);
+                    return "추론 질의 실패 (Gemma 4 API 통신 장애): [" + wcre.getStatusCode() + "] " + errorBody;
+                }
+                temp = temp.getCause();
+            }
             return "추론 질의 실패 (Gemma 4 API 통신 장애): " + e.getMessage();
         }
     }

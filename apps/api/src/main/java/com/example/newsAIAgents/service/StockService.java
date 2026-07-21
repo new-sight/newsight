@@ -240,10 +240,127 @@ public class StockService {
             result.put("dividendYield", quote.get("dividendYield"));
             result.put("exchangeName", quote.get("fullExchangeName"));
 
+            // Add original keys for frontend compatibility (GetStockInfo hooks expect regularMarket* fields)
+            result.put("regularMarketPrice", quote.get("regularMarketPrice"));
+            result.put("regularMarketChange", quote.get("regularMarketChange"));
+            result.put("regularMarketChangePercent", quote.get("regularMarketChangePercent"));
+            result.put("regularMarketVolume", quote.get("regularMarketVolume"));
+            result.put("averageDailyVolume3Month", quote.get("averageDailyVolume3Month"));
+            result.put("regularMarketDayRange", quote.get("regularMarketDayRange"));
+            result.put("fiftyTwoWeekRange", quote.get("fiftyTwoWeekRange"));
+            result.put("twoHundredDayAverage", quote.get("twoHundredDayAverage"));
+            result.put("earningsTimestamp", quote.get("earningsTimestamp"));
+            result.put("fullExchangeName", quote.get("fullExchangeName"));
+            result.put("longName", quote.get("longName"));
+            result.put("shortName", quote.get("shortName"));
+
             return result;
         } catch (Exception e) {
             log.error("[Stock Service] 응답 파싱 중 오류 발생", e);
             return Map.of("error", "응답 데이터 분석 실패");
+        }
+    }
+
+    public Map<String, Object> getStockChart(String symbol, String range, String interval) {
+        String targetSymbol = symbol;
+        if (targetSymbol != null && targetSymbol.toUpperCase().endsWith(".JP")) {
+            targetSymbol = targetSymbol.substring(0, targetSymbol.length() - 3) + ".T";
+        }
+        if (targetSymbol != null && !targetSymbol.contains(".")) {
+            if (targetSymbol.matches("^[0-9].{3}$")) {
+                targetSymbol = targetSymbol + ".T";
+            } else if (targetSymbol.matches("^[0-9]{6}$")) {
+                targetSymbol = targetSymbol + ".KS";
+            }
+        }
+        
+        final String finalSymbol = targetSymbol;
+        String cacheKey = "stock:chart:" + finalSymbol + ":" + range + ":" + interval;
+        try {
+            String cachedData = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedData != null) {
+                log.info("[Stock Service] Redis 캐시 반환 (차트) - 티커: {}", finalSymbol);
+                return objectMapper.readValue(cachedData, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            }
+        } catch (Exception e) {
+            log.warn("[Stock Service] Redis 캐시 읽기 실패 (차트)", e);
+        }
+
+        try {
+            String urlStr = "https://query1.finance.yahoo.com/v8/finance/chart/" + finalSymbol 
+                    + "?range=" + range + "&interval=" + interval;
+            URL url = java.net.URI.create(urlStr).toURL();
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", USER_AGENT);
+            conn.setRequestProperty("Accept", "application/json");
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                    StringBuilder response = new StringBuilder();
+                    String inputLine;
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
+                    
+                    Map<String, Object> parsedChartData = parseYahooChartResponse(response.toString());
+                    if (parsedChartData != null && !parsedChartData.containsKey("error")) {
+                        // Cache the simplified/parsed data for 5 minutes
+                        redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(parsedChartData), Duration.ofMinutes(5));
+                    }
+                    return parsedChartData;
+                }
+            } else {
+                log.error("[Stock Service] 야후 차트 API 에러 코드: {}", responseCode);
+                return Map.of("error", "야후 차트 API 응답 실패 (HTTP " + responseCode + ")");
+            }
+        } catch (Exception e) {
+            log.error("[Stock Service] 주식 차트 데이터 획득 실패 - 티커: {}", finalSymbol, e);
+            return Map.of("error", "주식 차트 정보 조회 실패: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseYahooChartResponse(String jsonResponse) {
+        try {
+            Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            if (responseMap == null || !responseMap.containsKey("chart")) {
+                return Map.of("error", "유효하지 않은 응답 데이터입니다.");
+            }
+            Map<String, Object> chart = (Map<String, Object>) responseMap.get("chart");
+            java.util.List<Map<String, Object>> resultList = (java.util.List<Map<String, Object>>) chart.get("result");
+            if (resultList == null || resultList.isEmpty()) {
+                return Map.of("error", "차트 정보를 찾을 수 없습니다.");
+            }
+            Map<String, Object> resultNode = resultList.get(0);
+            
+            Map<String, Object> meta = (Map<String, Object>) resultNode.get("meta");
+            String symbol = meta != null ? (String) meta.get("symbol") : "";
+            
+            java.util.List<Long> timestamps = (java.util.List<Long>) resultNode.get("timestamp");
+            
+            java.util.List<Double> prices = java.util.Collections.emptyList();
+            Map<String, Object> indicators = (Map<String, Object>) resultNode.get("indicators");
+            if (indicators != null) {
+                java.util.List<Map<String, Object>> quoteList = (java.util.List<Map<String, Object>>) indicators.get("quote");
+                if (quoteList != null && !quoteList.isEmpty()) {
+                    Map<String, Object> quote = quoteList.get(0);
+                    java.util.List<Double> closePrices = (java.util.List<Double>) quote.get("close");
+                    if (closePrices != null) {
+                        prices = closePrices;
+                    }
+                }
+            }
+
+            Map<String, Object> simplifiedResult = new java.util.LinkedHashMap<>();
+            simplifiedResult.put("symbol", symbol);
+            simplifiedResult.put("timestamps", timestamps != null ? timestamps : java.util.Collections.emptyList());
+            simplifiedResult.put("prices", prices);
+            return simplifiedResult;
+        } catch (Exception e) {
+            log.error("[Stock Service] 차트 응답 파싱 중 오류 발생", e);
+            return Map.of("error", "차트 응답 데이터 분석 실패");
         }
     }
 }

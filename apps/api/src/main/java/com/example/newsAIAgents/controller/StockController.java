@@ -18,4 +18,12 @@ public class StockController {
     public Map<String, Object> getStockInfo(@PathVariable String stockCode) {
         return stockService.getStockInfo(stockCode);
     }
+
+    @GetMapping("/api/stock/info/chart/{stockCode}")
+    public Map<String, Object> getStockChart(
+            @PathVariable String stockCode,
+            @org.springframework.web.bind.annotation.RequestParam(value = "range", defaultValue = "1mo") String range,
+            @org.springframework.web.bind.annotation.RequestParam(value = "interval", defaultValue = "1d") String interval) {
+        return stockService.getStockChart(stockCode, range, interval);
+    }
 }

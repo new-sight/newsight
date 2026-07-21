@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
@@ -19,9 +20,11 @@ public class NewsInferenceService {
     private final OllamaCloudService ollamaCloudService;
     private final org.springframework.data.neo4j.core.Neo4jClient neo4jClient;
     private final StringRedisTemplate redisTemplate;
+    private final com.example.newsAIAgents.repository.NewsJpaRepository newsJpaRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String REDIS_KEY_STOCK_BRIEFING = "stock_briefing";
+    private static final String REDIS_KEY_WEEKLY_BRIEFING = "weekly_stock_briefing";
 
     /**
      * Neo4j 지식 그래프에서 최근 뉴스의 태그 매핑 데이터를 조회하고, 
@@ -86,12 +89,24 @@ public class NewsInferenceService {
      * 그리고 관련 주식 데이터를 조회하여 Ollama LLM을 통해 기존 4개 트랙 형식의 브리핑 보고서를 생성합니다.
      */
     public String generateWeeklyBriefingWithoutAlgorithm() {
+        log.info("[Weekly LLM Briefing] Redis 캐시 확인 시도");
+        String cachedBriefing = null;
+        try {
+            cachedBriefing = redisTemplate.opsForValue().get(REDIS_KEY_WEEKLY_BRIEFING);
+            if (cachedBriefing != null) {
+                log.info("[Weekly LLM Briefing] 유효한 Redis 캐시가 존재합니다. 캐시된 브리핑을 반환합니다.");
+                return cachedBriefing;
+            }
+        } catch (Exception e) {
+            log.warn("[Weekly LLM Briefing] Redis 캐시 읽기 실패", e);
+        }
+
         log.info("[Weekly LLM Briefing] 각 트랙별 조건에 따른 Neo4j 지식 그래프 데이터 조회 시작");
 
         // 1. 쿼리 실행 및 데이터 수집
-        // Track 1: 어제와 오늘의 호재 뉴스 (최근 1일 이내, 감성점수 >= 0.5)
+        // Track 1: 어제와 오늘의 호재 뉴스 (최근 2일 이내, 감성점수 >= 0.5)
         String track1Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
-                "WHERE n.createdAt >= datetime() - duration('P1D') AND n.sentimentScore >= 0.5 " +
+                "WHERE n.createdAt >= datetime() - duration('P2D') AND n.sentimentScore >= 0.5 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
@@ -111,9 +126,9 @@ public class NewsInferenceService {
                 "LIMIT 100";
         List<Map<String, Object>> track2Data = new java.util.ArrayList<>(neo4jClient.query(track2Query).fetch().all());
 
-        // Track 3: 어제와 오늘의 악재 뉴스 (최근 1일 이내, 감성점수 <= -0.5)
+        // Track 3: 어제와 오늘의 악재 뉴스 (최근 2일 이내, 감성점수 <= -0.5)
         String track3Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
-                "WHERE n.createdAt >= datetime() - duration('P1D') AND n.sentimentScore <= -0.5 " +
+                "WHERE n.createdAt >= datetime() - duration('P2D') AND n.sentimentScore <= -0.5 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
@@ -135,10 +150,10 @@ public class NewsInferenceService {
 
         if (track1Data.isEmpty() && track2Data.isEmpty() && track3Data.isEmpty() && track4Data.isEmpty()) {
             log.warn("[Weekly LLM Briefing] 모든 트랙의 그래프 컨텍스트 데이터가 비어 있습니다.");
-            return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}");
+            return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}", REDIS_KEY_WEEKLY_BRIEFING);
         }
 
-        // 2. 조회한 그래프 데이터를 LLM에 제공할 텍스트 포맷으로 포매팅
+        // 2. 각 트랙 데이터를 LLM 포맷으로 변환 (중복 제거 및 크기 제어)
         StringBuilder contextBuilder = new StringBuilder();
         appendTrackContext(contextBuilder, "트랙 1: 어제와 오늘의 호재 뉴스 (감성점수 >= 0.5 기반 단기 모멘텀 분석)", track1Data);
         appendTrackContext(contextBuilder, "트랙 2: 지난 일주일간의 호재 뉴스 (감성점수 >= 0.4 기반 중장기/공급망 분석)", track2Data);
@@ -187,7 +202,7 @@ public class NewsInferenceService {
 
         log.info("[Weekly LLM Briefing] Gemma 4 기반 브리핑 리포트 생성 요청 송신");
         String rawBriefing = ollamaCloudService.queryGemma4ForReasoning(prompt);
-        return saveAndReturnBriefing(rawBriefing);
+        return saveAndReturnBriefing(rawBriefing, REDIS_KEY_WEEKLY_BRIEFING);
     }
 
     private void appendTrackContext(StringBuilder builder, String trackTitle, List<Map<String, Object>> data) {
@@ -196,29 +211,80 @@ public class NewsInferenceService {
             builder.append("- 해당 조건에 맞는 데이터가 존재하지 않습니다.\n\n");
             return;
         }
-        for (int i = 0; i < data.size(); i++) {
-            Map<String, Object> row = data.get(i);
+
+        // 중복 텍스트 제거를 위한 그룹화 자료구조
+        Map<String, Map<String, Object>> uniqueNews = new java.util.LinkedHashMap<>();
+        Map<String, Set<String>> newsTags = new java.util.HashMap<>();
+        Map<String, Set<String>> newsRelations = new java.util.HashMap<>();
+        Map<String, Set<String>> newsStocks = new java.util.HashMap<>();
+
+        for (Map<String, Object> row : data) {
             String newsTitle = (String) row.get("newsTitle");
-            String newsSummary = (String) row.get("newsSummary");
+            if (newsTitle == null) continue;
+
+            if (!uniqueNews.containsKey(newsTitle)) {
+                uniqueNews.put(newsTitle, row);
+                newsTags.put(newsTitle, new java.util.HashSet<>());
+                newsRelations.put(newsTitle, new java.util.HashSet<>());
+                newsStocks.put(newsTitle, new java.util.HashSet<>());
+            }
+
+            String tagName = (String) row.get("tagName");
+            if (tagName != null && !tagName.isEmpty()) {
+                Set<String> tags = newsTags.get(newsTitle);
+                if (tags.size() < 8) {
+                    tags.add(tagName);
+                }
+            }
+
+            String relationType = (String) row.get("relationType");
+            String relatedTagName = (String) row.get("relatedTagName");
+            if (relationType != null && relatedTagName != null) {
+                Set<String> rels = newsRelations.get(newsTitle);
+                if (rels.size() < 5) {
+                    rels.add(tagName + " --[" + relationType + "]--> " + relatedTagName);
+                }
+            }
+
+            String stockName = (String) row.get("stockName");
+            String stockTicker = (String) row.get("stockTicker");
+            if (stockName != null && stockTicker != null) {
+                Set<String> stocks = newsStocks.get(newsTitle);
+                if (stocks.size() < 5) {
+                    stocks.add(stockName + " (" + stockTicker + ")");
+                }
+            }
+        }
+
+        int index = 1;
+        for (String newsTitle : uniqueNews.keySet()) {
+            Map<String, Object> newsRow = uniqueNews.get(newsTitle);
+            String newsSummary = (String) newsRow.get("newsSummary");
             Double sentimentScore = null;
-            Object sentimentObj = row.get("sentimentScore");
+            Object sentimentObj = newsRow.get("sentimentScore");
             if (sentimentObj instanceof Number) {
                 sentimentScore = ((Number) sentimentObj).doubleValue();
             }
-            String tagName = (String) row.get("tagName");
-            String relationType = (String) row.get("relationType");
-            String relatedTagName = (String) row.get("relatedTagName");
-            String stockName = (String) row.get("stockName");
-            String stockTicker = (String) row.get("stockTicker");
 
-            builder.append(String.format("[%d] 뉴스: %s (감성 점수: %s)\n", i + 1, newsTitle, sentimentScore));
+            builder.append(String.format("[%d] 뉴스: %s (감성 점수: %s)\n", index++, newsTitle, sentimentScore));
             builder.append(String.format("    - 요약: %s\n", newsSummary));
-            builder.append(String.format("    - 연결 태그: %s\n", tagName));
-            if (relationType != null && relatedTagName != null) {
-                builder.append(String.format("    - 태그 관계: %s --[%s]--> %s\n", tagName, relationType, relatedTagName));
+
+            Set<String> tags = newsTags.get(newsTitle);
+            if (!tags.isEmpty()) {
+                builder.append(String.format("    - 연결 태그: %s\n", String.join(", ", tags)));
             }
-            if (stockName != null && stockTicker != null) {
-                builder.append(String.format("    - 매칭 주식: %s (%s)\n", stockName, stockTicker));
+
+            Set<String> relations = newsRelations.get(newsTitle);
+            if (!relations.isEmpty()) {
+                builder.append("    - 태그 관계:\n");
+                for (String rel : relations) {
+                    builder.append(String.format("      * %s\n", rel));
+                }
+            }
+
+            Set<String> stocks = newsStocks.get(newsTitle);
+            if (!stocks.isEmpty()) {
+                builder.append(String.format("    - 매칭 주식: %s\n", String.join(", ", stocks)));
             }
             builder.append("\n");
         }
@@ -306,7 +372,7 @@ public class NewsInferenceService {
                 "WHERE f.lang_code IN ['en', 'ja', 'zh'] " +
                 "  AND f.sentimentScore > 0.4 " +
                 "  AND d.lang_code = 'ko' " +
-                "  AND f.createdAt >= datetime() - duration('P1D') " +
+                "  AND f.createdAt >= datetime() - duration('P2D') " +
                 "OPTIONAL MATCH (t)-[:SYNONYM_OF]->(m:Tag) " +
                 "WITH f, d, coalesce(m, t) AS masterTag " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = masterTag.name OR s.kor_name = masterTag.name " +
@@ -415,7 +481,7 @@ public class NewsInferenceService {
         // 4. [트랙 3: 단기적인 악재 종목] 조회 (트랙 1, 2 종목 배제)
         String track3Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
                 "WHERE n.sentimentScore < -0.4 " +
-                "  AND n.createdAt >= datetime() - duration('P1D') " +
+                "  AND n.createdAt >= datetime() - duration('P2D') " +
                 "OPTIONAL MATCH (t)-[:SYNONYM_OF]->(m:Tag) " +
                 "WITH n, coalesce(m, t) AS masterTag " +
                 "MATCH (s:Stock) WHERE s.name = masterTag.name OR s.kor_name = masterTag.name " +
@@ -554,7 +620,7 @@ public class NewsInferenceService {
                 (track3Result == null || track3Result.isEmpty()) &&
                 (track4Result == null || track4Result.isEmpty())) {
             log.info("[Briefing Service] 추천할 종목 데이터가 없어 빈 JSON을 즉시 반환합니다.");
-            return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}");
+            return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}", REDIS_KEY_STOCK_BRIEFING);
         }
 
         // 8. 프롬프트 작성
@@ -598,10 +664,10 @@ public class NewsInferenceService {
 
         log.info("[Briefing Service] Gemma 4 브리핑 리포트 생성 요청 송신");
         String rawBriefing = ollamaCloudService.queryGemma4ForReasoning(prompt);
-        return saveAndReturnBriefing(rawBriefing);
+        return saveAndReturnBriefing(rawBriefing, REDIS_KEY_STOCK_BRIEFING);
     }
 
-    private String saveAndReturnBriefing(String briefingJson) {
+    private String saveAndReturnBriefing(String briefingJson, String redisKey) {
         String cleanedJson = cleanJsonString(briefingJson);
         log.info("[Briefing Service] 정제 전 원본 JSON 길이: {}, 정제 후 JSON: {}", 
                  briefingJson != null ? briefingJson.length() : 0, cleanedJson);
@@ -611,12 +677,67 @@ public class NewsInferenceService {
             map.put("created_at", LocalDateTime.now().toString());
             resultJson = objectMapper.writeValueAsString(map);
             
-            redisTemplate.opsForValue().set(REDIS_KEY_STOCK_BRIEFING, resultJson);
+            redisTemplate.opsForValue().set(redisKey, resultJson);
             log.info("[Briefing Service] 새로운 브리핑을 Redis에 저장 완료했습니다.");
         } catch (Exception e) {
             log.error("[Briefing Service] 브리핑에 created_at 추가 및 Redis 저장 실패", e);
         }
         return resultJson;
+    }
+
+    /**
+     * 특정 주식코드와 관련된 뉴스 ID 리스트를 Neo4j에서 조회합니다.
+     */
+    public java.util.List<String> getNewsIdsByStockCode(String stockCode) {
+        String cypherQuery = "MATCH (s:Stock {ticker: $stockCode}) " +
+                "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE t.name = s.name OR t.name = s.kor_name OR t.name = s.ticker " +
+                "   OR EXISTS { " +
+                "       MATCH (t)-[:SYNONYM_OF]-(other:Tag) " +
+                "       WHERE other.name = s.name OR other.name = s.kor_name OR other.name = s.ticker " +
+                "   } " +
+                "RETURN DISTINCT n.id AS newsId";
+        
+        java.util.Collection<Map<String, Object>> result = neo4jClient.query(cypherQuery)
+                .bind(stockCode).to("stockCode")
+                .fetch()
+                .all();
+        
+        java.util.List<String> newsIds = new java.util.ArrayList<>();
+        if (result != null) {
+            for (Map<String, Object> record : result) {
+                String newsId = (String) record.get("newsId");
+                if (newsId != null) {
+                    newsIds.add(newsId);
+                }
+            }
+        }
+        return newsIds;
+    }
+
+    /**
+     * 특정 주식코드와 관련된 뉴스 목록을 Neo4j에서 ID로 찾은 후, PostgreSQL(JPA)에서 세부 정보를 조회합니다.
+     */
+    public java.util.List<com.example.newsAIAgents.domain.NewsEntity> getNewsDetailsByStockCode(String stockCode) {
+        java.util.List<String> newsIds = getNewsIdsByStockCode(stockCode);
+        if (newsIds == null || newsIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        // Find entities in PostgreSQL database using JpaRepository.findAllById
+        java.util.List<com.example.newsAIAgents.domain.NewsEntity> entities = newsJpaRepository.findAllById(newsIds);
+        
+        // Sort entities in publishedAt descending order to maintain consistency
+        entities.sort((a, b) -> {
+            LocalDateTime atA = a.getPublishedAt();
+            LocalDateTime atB = b.getPublishedAt();
+            if (atA == null && atB == null) return 0;
+            if (atA == null) return 1;
+            if (atB == null) return -1;
+            return atB.compareTo(atA); // Descending order
+        });
+        
+        return entities;
     }
 
     private String cleanJsonString(String rawJson) {
