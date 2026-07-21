@@ -109,14 +109,14 @@ export default function NewsPage() {
           </div>
         </div>
 
-        {/* 오른쪽 관련 뉴스 컬럼 - 페이지 전체 스크롤을 통해 쭉 내려가고, 헤더만 상단 고정 */}
-        <div className="flex-1">
-          <div className="sticky top-0 bg-bg pt-2 pb-3 z-10 mb-2">
-            <h1 className="text-lg font-semibold text-white tracking-wide">
-              종목 관련 뉴스
-            </h1>
+        {/* 오른쪽 관련 뉴스 컬럼 - 왼쪽 컬럼과 동일하게 뷰포트에 고정되어 내부 스크롤 지원 */}
+        <div className="flex-1 sticky top-6 h-[calc(100vh-100px)] flex flex-col">
+          <h1 className="text-lg font-semibold text-white tracking-wide mb-2 shrink-0">
+            종목 관련 뉴스
+          </h1>
+          <div className="flex-1 overflow-x-hidden overflow-y-auto pr-2">
+            <StockRelatedNews />
           </div>
-          <StockRelatedNews />
         </div>
       </div>
     </div>

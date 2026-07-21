@@ -23,7 +23,7 @@ export default function StockPriceHeader({
         {data.symbol} · {data.fullExchangeName || "STOCK MARKET"}
       </div>
       <div className="text-xl font-bold rounded-lg px-1.5 text-white">
-        {data.longName || data.shortName || data.symbol}
+        {data.companyName}
       </div>
       <div className="flex gap-2 rounded-lg px-1.5 items-center text-sm">
         {/* regularMarketPrice */}

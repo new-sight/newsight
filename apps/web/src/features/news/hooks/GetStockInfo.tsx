@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 export interface StockInfoData {
   symbol?: string;
+  companyName?: string;
   fullExchangeName?: string;
   shortName?: string;
   longName?: string;
