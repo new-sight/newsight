@@ -15,6 +15,7 @@ createRoot(document.getElementById("root")!).render(
           <Route index element={<DashboardPage />} />
           <Route path="prediction" element={<PredictionPage />} />
           <Route path="news" element={<NewsPage />} />
+          <Route path="news/:stockCode" element={<NewsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
