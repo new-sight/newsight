@@ -12,7 +12,8 @@ export interface PredictionResponse {
 }
 
 export async function getPrediction(): Promise<PredictionResponse> {
-  const response = await fetch("http://43.201.107.136/api/news/briefing");
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const response = await fetch(`${baseUrl}/api/news/briefing`);
 
   if (!response.ok) {
     throw new Error("주식 예측 데이터를 불러오지 못했습니다.");

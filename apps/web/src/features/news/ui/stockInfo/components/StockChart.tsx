@@ -22,8 +22,9 @@ export default function StockChart({ symbol }: { symbol: string }) {
     setLoading(true);
     setError(null);
     try {
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
       const res = await axios.get<ChartData>(
-        `http://localhost:8080/api/stock/info/chart/${symbol}?range=1mo&interval=1d`,
+        `${baseUrl}/api/stock/info/chart/${symbol}?range=1mo&interval=1d`,
       );
       setData(res.data);
     } catch (err: unknown) {

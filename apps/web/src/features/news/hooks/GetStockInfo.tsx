@@ -47,8 +47,9 @@ export function useGetStockInfo(stockCode: string | null | undefined) {
     setLoading(true);
     setError(null);
     try {
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
       const response = await axios.get<StockInfoData>(
-        `http://localhost:8080/api/stock/info/${stockCode}`,
+        `${baseUrl}/api/stock/info/${stockCode}`,
       );
       const result = response.data;
       console.log("[useGetStockInfo] Received result:", result);
