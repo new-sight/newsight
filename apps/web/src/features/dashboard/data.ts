@@ -1,8 +1,13 @@
-export type NewsCategory = "HEADLINE" | "BUSINESS" | "TECHNOLOGY" | "SCIENCE" | "HEALTH";
+export type NewsCategory =
+  | "HEADLINE"
+  | "BUSINESS"
+  | "TECHNOLOGY"
+  | "SCIENCE"
+  | "HEALTH";
 export type Country = "KOREA" | "USA" | "JAPAN" | "CHINA";
 
 export const CATEGORY_LABELS: Record<NewsCategory, string> = {
-  HEADLINE: "🔥 HOT",
+  HEADLINE: "헤드라인",
   TECHNOLOGY: "기술",
   BUSINESS: "경제",
   SCIENCE: "과학",
@@ -34,13 +39,18 @@ export const CAT_COLOR_VAR: Record<NewsCategory, string> = {
 };
 
 export const CAT_COLOR_HEX: Record<NewsCategory, number> = {
-  HEADLINE: 0xc78cf0,
+  HEADLINE: 0xef4444,
   TECHNOLOGY: 0x63d6f0,
   BUSINESS: 0xe8b84f,
   SCIENCE: 0x7cd9a0,
   HEALTH: 0xe08cc9,
 };
 
-// "전체" is not a real option -- deselecting the active chip falls back to it implicitly.
-export const CATEGORY_OPTIONS: NewsCategory[] = ["HEADLINE", "TECHNOLOGY", "BUSINESS", "SCIENCE", "HEALTH"];
+export const CATEGORY_OPTIONS: NewsCategory[] = [
+  "HEADLINE",
+  "TECHNOLOGY",
+  "BUSINESS",
+  "SCIENCE",
+  "HEALTH",
+];
 export const COUNTRY_OPTIONS: Country[] = ["KOREA", "CHINA", "JAPAN", "USA"];

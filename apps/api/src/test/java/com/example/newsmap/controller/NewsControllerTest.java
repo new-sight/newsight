@@ -40,7 +40,7 @@ class NewsControllerTest {
                 new NewsListResponse(List.of(
                         new NewsItemResponse("e38acf8c-03ee-5c32-8bbe-c73f124ca383", "title", "source", Country.JAPAN,
                                 Category.BUSINESS, LocalDateTime.parse("2026-07-21T10:06:00"),
-                                "https://example.com/news/1")
+                                "https://example.com/news/1", List.of("Samsung Electronics", "SK Hynix"))
                 ), 0, 20, 1)
         );
 

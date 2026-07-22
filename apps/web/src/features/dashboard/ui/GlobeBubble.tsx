@@ -12,7 +12,9 @@ export default function GlobeBubble({ name, headline, x, y, flip }: Bubble) {
           : "translate(-50%, calc(-100% - 8px))",
       }}
     >
-      <div className="mb-0.5 truncate text-[11px] font-bold text-accent">{name}</div>
+      <div className="mb-0.5 truncate text-[11px] font-bold text-accent">
+        {name}
+      </div>
       <div className="line-clamp-2">{headline}</div>
       <div
         className={
