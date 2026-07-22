@@ -14,7 +14,10 @@ import { useCountryNewsStats } from "../hooks/useCountryNewsStats";
 import { NEWS_PAGE_SIZE, useNewsList } from "../hooks/useNewsList";
 
 function timeAgo(publishedAt: string): string {
-  const minutes = Math.max(0, Math.floor((Date.now() - new Date(publishedAt).getTime()) / 60000));
+  const minutes = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(publishedAt).getTime()) / 60000),
+  );
   if (minutes < 60) return `${minutes}분 전`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}시간 전`;
@@ -45,9 +48,9 @@ export default function DashboardPage() {
               실시간 글로벌 뉴스 지도
             </div>
           </div>
-          <div className="whitespace-nowrap text-[12.5px] text-text-muted">
+          {/* <div className="whitespace-nowrap text-[12.5px] text-text-muted">
             총 {totalCount}건
-          </div>
+          </div> */}
         </div>
 
         <div className="mb-2.5 flex flex-wrap items-center gap-3">
@@ -93,6 +96,7 @@ export default function DashboardPage() {
         <Globe
           countryFilter={countryFilter}
           stats={countryStats}
+          scatterNews={countryFilter === "all" ? [] : news}
           rotBarRef={rotBarRef}
           onRotationChange={setRotationDeg}
         />

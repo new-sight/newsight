@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import type { NewsListItem } from "../api/news";
 import {
   CAT_COLOR_HEX,
   COUNTRY_COORDS,
@@ -20,6 +21,7 @@ const BUBBLE_STEP = BUBBLE_HEIGHT + BUBBLE_GAP;
 const EDGE_MARGIN = 4;
 
 export type Bubble = {
+  id: string;
   name: string;
   headline: string;
   x: number;
@@ -28,7 +30,22 @@ export type Bubble = {
 };
 type GlobeApi = {
   updateHighlight: (country: Country | "all", stats: CountryStat[]) => void;
+  setScatterNews: (items: NewsListItem[]) => void;
 };
+
+// Deterministic pseudo-random point on the unit sphere, seeded by the article id --
+// stable across re-renders so a given article's dot doesn't jump around, but
+// otherwise unrelated to the article's real-world origin (that's the point: the
+// user wants several headlines spread across the globe, not pinned to geography).
+function scatterPosition(seed: string): { phi: number; theta: number } {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const u = (h % 10007) / 10007;
+  const v = (Math.floor(h / 10007) % 10007) / 10007;
+  return { phi: Math.acos(2 * u - 1), theta: 2 * Math.PI * v };
+}
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);
@@ -91,11 +108,13 @@ export const webglSupported = hasWebGL();
 export function useGlobeScene({
   countryFilter,
   stats,
+  scatterNews,
   rotBarRef,
   onRotationChange,
 }: {
   countryFilter: Country | "all";
   stats: CountryStat[];
+  scatterNews: NewsListItem[];
   rotBarRef: React.RefObject<HTMLDivElement | null>;
   onRotationChange: (deg: number) => void;
 }) {
@@ -190,30 +209,58 @@ export function useGlobeScene({
       markerMeshes[country] = mesh;
     });
 
+    // Small dots scattered at random-but-stable points on the sphere, unrelated to
+    // any country's real coordinates -- rebuilt whenever the selected country's
+    // article list changes (see setScatterNews).
+    const scatterGroup = new THREE.Group();
+    group.add(scatterGroup);
+    let scatterMeshes: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>[] = [];
+    let currentScatterNews: NewsListItem[] = [];
+
     const renderThree = () => renderer.render(scene, camera);
 
     const computeBubbles = (activeCountry: Country | "all", activeStats: CountryStat[]) => {
       const cw = wrap.clientWidth;
       const ch = wrap.clientHeight;
       const next: Bubble[] = [];
-      const visibleStats = activeStats.filter(
-        (stat) => activeCountry === "all" || stat.country === activeCountry,
-      );
-      visibleStats.forEach((stat) => {
-        const worldPos = new THREE.Vector3();
-        markerMeshes[stat.country].getWorldPosition(worldPos);
-        if (worldPos.z < 0.15) return;
-        const proj = worldPos.clone().project(camera);
-        if (proj.x < -0.92 || proj.x > 0.92 || proj.y < -0.92 || proj.y > 0.92)
-          return;
-        next.push({
-          name: COUNTRY_LABELS[stat.country],
-          headline: stat.headline,
-          x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
-          y: (1 - (proj.y * 0.5 + 0.5)) * ch,
-          flip: false,
+
+      if (activeCountry === "all") {
+        activeStats.forEach((stat) => {
+          const worldPos = new THREE.Vector3();
+          markerMeshes[stat.country].getWorldPosition(worldPos);
+          if (worldPos.z < 0.15) return;
+          const proj = worldPos.clone().project(camera);
+          if (proj.x < -0.92 || proj.x > 0.92 || proj.y < -0.92 || proj.y > 0.92)
+            return;
+          next.push({
+            id: stat.country,
+            name: COUNTRY_LABELS[stat.country],
+            headline: stat.headline,
+            x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
+            y: (1 - (proj.y * 0.5 + 0.5)) * ch,
+            flip: false,
+          });
         });
-      });
+      } else {
+        currentScatterNews.forEach((item, i) => {
+          const mesh = scatterMeshes[i];
+          if (!mesh) return;
+          const worldPos = new THREE.Vector3();
+          mesh.getWorldPosition(worldPos);
+          if (worldPos.z < 0.15) return;
+          const proj = worldPos.clone().project(camera);
+          if (proj.x < -0.92 || proj.x > 0.92 || proj.y < -0.92 || proj.y > 0.92)
+            return;
+          next.push({
+            id: item.newsId,
+            name: item.source,
+            headline: item.title,
+            x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
+            y: (1 - (proj.y * 0.5 + 0.5)) * ch,
+            flip: false,
+          });
+        });
+      }
       next.sort((a, b) => a.x - b.x);
       const placed: Array<{ x: number; top: number; bottom: number }> = [];
       next.forEach((b) => {
@@ -239,7 +286,34 @@ export function useGlobeScene({
       renderThree();
       computeBubbles(activeCountry, activeStats);
     };
-    apiRef.current = { updateHighlight };
+
+    const setScatterNews = (items: NewsListItem[]) => {
+      currentScatterNews = items;
+      scatterMeshes.forEach((mesh) => {
+        scatterGroup.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      });
+      scatterMeshes = items.map((item) => {
+        const { phi, theta } = scatterPosition(item.newsId);
+        const rad = 1.02;
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.018, 12, 12),
+          new THREE.MeshBasicMaterial({ color: CAT_COLOR_HEX[item.category] }),
+        );
+        mesh.position.set(
+          -rad * Math.sin(phi) * Math.cos(theta),
+          rad * Math.cos(phi),
+          rad * Math.sin(phi) * Math.sin(theta),
+        );
+        scatterGroup.add(mesh);
+        return mesh;
+      });
+      renderThree();
+      computeBubbles(countryFilterRef.current, statsRef.current);
+    };
+
+    apiRef.current = { updateHighlight, setScatterNews };
 
     const applyFrame = () => {
       group.rotation.y = rotationY;
@@ -324,6 +398,10 @@ export function useGlobeScene({
     statsRef.current = stats;
     apiRef.current?.updateHighlight(countryFilter, stats);
   }, [countryFilter, stats]);
+
+  useEffect(() => {
+    apiRef.current?.setScatterNews(scatterNews);
+  }, [scatterNews]);
 
   return { wrapRef, bubbles };
 }
