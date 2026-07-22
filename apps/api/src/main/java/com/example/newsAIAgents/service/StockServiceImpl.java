@@ -44,10 +44,14 @@ public class StockServiceImpl implements StockService {
      */
     private YahooSession getYahooSession(boolean forceRefresh) {
         if (!forceRefresh) {
-            String cachedCookie = redisTemplate.opsForValue().get(REDIS_KEY_COOKIE);
-            String cachedCrumb = redisTemplate.opsForValue().get(REDIS_KEY_CRUMB);
-            if (cachedCookie != null && cachedCrumb != null) {
-                return new YahooSession(cachedCookie, cachedCrumb);
+            try {
+                String cachedCookie = redisTemplate.opsForValue().get(REDIS_KEY_COOKIE);
+                String cachedCrumb = redisTemplate.opsForValue().get(REDIS_KEY_CRUMB);
+                if (cachedCookie != null && cachedCrumb != null) {
+                    return new YahooSession(cachedCookie, cachedCrumb);
+                }
+            } catch (Exception e) {
+                log.warn("[Stock Service] Redis 세션 캐시 조회 실패 (Redis 연결 오류)", e);
             }
         }
 
@@ -98,10 +102,14 @@ public class StockServiceImpl implements StockService {
                 return null;
             }
             
-            // Redis에 1시간 동안 저장
-            redisTemplate.opsForValue().set(REDIS_KEY_COOKIE, cookie, Duration.ofHours(1));
-            redisTemplate.opsForValue().set(REDIS_KEY_CRUMB, crumb, Duration.ofHours(1));
-            log.info("[Stock Service] 야후 신규 세션 캐싱 성공 (1시간 유효) - Cookie: {}, Crumb: {}", cookie, crumb);
+            // Redis에 1시간 동안 저장 시도
+            try {
+                redisTemplate.opsForValue().set(REDIS_KEY_COOKIE, cookie, Duration.ofHours(1));
+                redisTemplate.opsForValue().set(REDIS_KEY_CRUMB, crumb, Duration.ofHours(1));
+                log.info("[Stock Service] 야후 신규 세션 캐싱 성공 (1시간 유효)");
+            } catch (Exception e) {
+                log.warn("[Stock Service] 야후 신규 세션 Redis 캐싱 실패 (Redis 연결 오류)", e);
+            }
             
             return new YahooSession(cookie, crumb);
         } catch (Exception e) {
@@ -111,9 +119,13 @@ public class StockServiceImpl implements StockService {
     }
 
     private void clearYahooSession() {
-        redisTemplate.delete(REDIS_KEY_COOKIE);
-        redisTemplate.delete(REDIS_KEY_CRUMB);
-        log.info("[Stock Service] 만료되거나 유효하지 않은 야후 세션 캐시를 삭제했습니다.");
+        try {
+            redisTemplate.delete(REDIS_KEY_COOKIE);
+            redisTemplate.delete(REDIS_KEY_CRUMB);
+            log.info("[Stock Service] 만료되거나 유효하지 않은 야후 세션 캐시를 삭제했습니다.");
+        } catch (Exception e) {
+            log.warn("[Stock Service] 야후 세션 캐시 삭제 실패 (Redis 연결 오류)", e);
+        }
     }
 
     @Override
@@ -157,7 +169,11 @@ public class StockServiceImpl implements StockService {
             Map<String, Object> stockData = fetchQuoteWithRetry(finalSymbol, session, 0);
             if (stockData != null && !stockData.containsKey("error")) {
                 // Redis에 10초 동안 저장하여 잦은 호출 방지 및 실시간성 보장
-                redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(stockData), Duration.ofSeconds(10));
+                try {
+                    redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(stockData), Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("[Stock Service] 주식 데이터 Redis 캐싱 실패 (Redis 연결 오류)", e);
+                }
             }
             return stockData;
         } catch (Exception e) {
@@ -309,7 +325,11 @@ public class StockServiceImpl implements StockService {
                     Map<String, Object> parsedChartData = parseYahooChartResponse(response.toString());
                     if (parsedChartData != null && !parsedChartData.containsKey("error")) {
                         // Cache the simplified/parsed data for 5 minutes
-                        redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(parsedChartData), Duration.ofMinutes(5));
+                        try {
+                            redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(parsedChartData), Duration.ofMinutes(5));
+                        } catch (Exception e) {
+                            log.warn("[Stock Service] 차트 데이터 Redis 캐싱 실패 (Redis 연결 오류)", e);
+                        }
                     }
                     return parsedChartData;
                 }
