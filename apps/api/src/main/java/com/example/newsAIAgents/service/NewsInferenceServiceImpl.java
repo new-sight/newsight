@@ -291,8 +291,12 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
             map.put("created_at", LocalDateTime.now().toString());
             resultJson = objectMapper.writeValueAsString(map);
             
-            redisTemplate.opsForValue().set(redisKey, resultJson);
-            log.info("[Briefing Service] 새로운 브리핑을 Redis에 저장 완료했습니다.");
+            try {
+                redisTemplate.opsForValue().set(redisKey, resultJson, java.time.Duration.ofHours(1));
+                log.info("[Briefing Service] 새로운 브리핑을 Redis에 저장 완료했습니다. (유효기간: 1시간)");
+            } catch (Exception e) {
+                log.warn("[Briefing Service] 새로운 브리핑 Redis 저장 실패 (Redis 연결 오류)", e);
+            }
         } catch (Exception e) {
             log.error("[Briefing Service] 브리핑에 created_at 추가 및 Redis 저장 실패", e);
         }
