@@ -18,7 +18,7 @@ export type NewsListResponse = {
   totalCount: number;
 };
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export async function fetchNewsList(params: {
   country?: Country;
@@ -32,7 +32,9 @@ export async function fetchNewsList(params: {
   query.set("page", String(params.page ?? 0));
   query.set("size", String(params.size ?? 20));
 
-  const response = await fetch(`${API_BASE_URL}/api/news/list?${query.toString()}`);
+  const response = await fetch(
+    `${API_BASE_URL}/api/news/list?${query.toString()}`,
+  );
   if (!response.ok) {
     throw new Error("뉴스 리스트를 불러오지 못했습니다.");
   }
