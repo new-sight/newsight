@@ -6,9 +6,18 @@ services:
     container_name: news-ai-api
     restart: always
     ports:
-      - "80:8080"
+      - "80:80"
+      - "443:443"
     depends_on:
       - redis
+    volumes:
+      # [선택 1] 로컬 개발 환경: mkcert 등으로 생성한 외부 인증서를 주입하려면 주석을 해제하세요.
+      # - ./certs/localhost.crt:/etc/nginx/ssl/server.crt:ro
+      # - ./certs/localhost.key:/etc/nginx/ssl/server.key:ro
+
+      # [선택 2] 운영 환경: Certbot Let's Encrypt 인증서 자동 갱신 시 볼륨 마운트
+      - certbot-etc:/etc/nginx/ssl:ro
+      - certbot-var:/var/www/certbot:ro
     environment:
       # Neo4j
       - NEO4J_URI=${NEO4J_URI}
@@ -46,3 +55,17 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+
+  certbot:
+    image: certbot/certbot
+    container_name: news-ai-certbot
+    restart: always
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/www/certbot
+    # 12시간마다 인증서 자동 갱신 체크를 수행하도록 무한 루프 설정
+    entrypoint: "/bin/sh -c 'trap exit 0; SIGTERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  certbot-etc:
+  certbot-var:

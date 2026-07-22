@@ -28,31 +28,11 @@ public class NewsInferenceController {
     }
 
     /**
-     * Neo4j 지식 그래프의 알고리즘 A, B, C 분석을 기반으로 주식 브리핑 보고서를 생성하여 반환합니다.
+     * Neo4j 지식 그래프 정보를 LLM에 컨텍스트로 전달하여 지능형 주식 브리핑 보고서를 생성하여 반환합니다.
      * 예: GET /api/news/briefing
      */
     @GetMapping(value = "/briefing", produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getStockBriefing() {
-        String briefingResult = newsInferenceService.generateStockBriefing();
-        return ResponseEntity.ok(briefingResult);
-    }
-
-    /**
-     * 캐시를 우회하고 Neo4j와 LLM을 즉시 호출하여 브리핑을 강제 생성 및 갱신한 결과를 즉시 반환합니다.
-     * 예: GET /api/news/briefing/force
-     */
-    @GetMapping(value = "/briefing/force", produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> forceGenerateStockBriefing() {
-        String briefingResult = newsInferenceService.doGenerateBriefing();
-        return ResponseEntity.ok(briefingResult);
-    }
-
-    /**
-     * Neo4j에서 일주일치 연결된 데이터를 가져와 알고리즘 없이 Ollama를 통해 직접 4개 트랙 형식의 분석 보고서를 생성합니다.
-     * 예: GET /api/news/briefing/weekly-llm
-     */
-    @GetMapping(value = "/briefing/weekly-llm", produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getWeeklyBriefingWithoutAlgorithm() {
+    public ResponseEntity<String> getWeeklyBriefing() {
         String briefingResult = newsInferenceService.generateWeeklyBriefingWithoutAlgorithm();
         return ResponseEntity.ok(briefingResult);
     }
