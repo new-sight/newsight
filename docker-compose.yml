@@ -62,11 +62,10 @@ services:
     container_name: news-ai-certbot
     restart: always
     volumes:
-      - certbot-etc:/etc/letsencrypt
+      - /etc/letsencrypt:/etc/letsencrypt
       - certbot-var:/var/www/certbot
     # 12시간마다 인증서 자동 갱신 체크를 수행하도록 무한 루프 설정
     entrypoint: "/bin/sh -c 'trap exit 0; SIGTERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
-  certbot-etc:
   certbot-var:
