@@ -23,40 +23,37 @@ export default function PredictionSection({
     page * ITEMS_PER_PAGE + ITEMS_PER_PAGE,
   );
 
-  const textColor = isUp ? "text-red-400" : "text-sky-400";
-  const dotColor = isUp ? "bg-red-500" : "bg-sky-500";
-  const buttonColor = isUp
-    ? "border-red-500/40 text-red-400 hover:bg-red-500/15"
-    : "border-sky-500/40 text-sky-400 hover:bg-sky-500/15";
+  const textColor = isUp ? "text-up" : "text-down";
+  const dotColor = isUp ? "bg-up" : "bg-down";
 
   return (
-    <div className="rounded-xl bg-[#111111]  p-5 h-full">
-      <header className="mb-4 flex items-center justify-between gap-3">
+    <div className="p-3.5">
+      <header className="mb-2.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
+          <span className={`h-2 w-2 rounded-full ${dotColor}`} />
 
-          <h2 className={`text-xl font-bold ${textColor}`}>
+          <h2 className={`font-heading text-base font-semibold ${textColor}`}>
             {title}
           </h2>
 
-          <span className="text-sm text-zinc-400">
+          <span className="text-[12.5px] text-text-muted">
             {stocks.length}종목
           </span>
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setPage((current) => Math.max(0, current - 1))}
               disabled={page === 0}
-              className={`flex h-8 w-8 items-center justify-center rounded border text-lg transition disabled:cursor-not-allowed disabled:opacity-30 ${buttonColor}`}
+              className={`font-mono text-base transition disabled:text-text-muted/40 ${textColor}`}
               aria-label="이전 페이지"
             >
               ‹
             </button>
 
-            <span className="min-w-10 text-center font-mono text-xs text-zinc-400">
+            <span className="min-w-10 text-center font-mono text-[12.5px] tabular-nums text-text-muted">
               {page + 1} / {totalPages}
             </span>
 
@@ -66,7 +63,7 @@ export default function PredictionSection({
                 setPage((current) => Math.min(totalPages - 1, current + 1))
               }
               disabled={page === totalPages - 1}
-              className={`flex h-8 w-8 items-center justify-center rounded border text-lg transition disabled:cursor-not-allowed disabled:opacity-30 ${buttonColor}`}
+              className={`font-mono text-base transition disabled:text-text-muted/40 ${textColor}`}
               aria-label="다음 페이지"
             >
               ›
@@ -75,7 +72,7 @@ export default function PredictionSection({
         )}
       </header>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {visibleStocks.map((item, index) => (
           <StockCard
             key={item.stock}

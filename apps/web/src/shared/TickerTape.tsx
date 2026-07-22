@@ -56,7 +56,6 @@ function useTickerQuotes(watchlist: Watchlist[]) {
       cancelled = true;
       clearInterval(id);
     };
-    // watchlist is a module-level constant; only re-run on mount/unmount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -69,7 +68,7 @@ export default function TickerTape() {
 
   return (
     <div className="overflow-hidden whitespace-nowrap border-b border-border bg-bg-sunken py-2">
-      <div className="inline-flex animate-[marquee_20s_linear_infinite] pl-6">
+      <div className="inline-flex animate-[marquee_35s_linear_infinite] pl-6">
         {items.map((item, i) => (
           <span
             key={i}
