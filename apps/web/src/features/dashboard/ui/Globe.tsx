@@ -1,7 +1,6 @@
 import type { NewsListItem } from "../api/news";
 import type { Country } from "../data";
 import type { CountryStat } from "../hooks/useCountryNewsStats";
-import CategoryLegend from "./CategoryLegend";
 import GlobeScene from "./GlobeScene";
 
 export default function Globe({
@@ -26,7 +25,6 @@ export default function Globe({
         rotBarRef={rotBarRef}
         onRotationChange={onRotationChange}
       />
-      <CategoryLegend />
     </div>
   );
 }
