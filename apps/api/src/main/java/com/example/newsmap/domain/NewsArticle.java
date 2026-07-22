@@ -43,4 +43,7 @@ public class NewsArticle {
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
+
+    @Column(name = "tags")
+    private String tags;
 }
