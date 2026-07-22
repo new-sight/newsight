@@ -16,8 +16,9 @@ services:
       # - ./certs/localhost.key:/etc/nginx/ssl/server.key:ro
 
       # [선택 2] 운영 환경: Let's Encrypt 인증서 마운트 (최초 발급 성공 시 아래 두 줄의 주석을 푸세요)
-      - /etc/letsencrypt/live/butterflyeffect.o-r.kr/fullchain.pem:/etc/nginx/ssl/server.crt:ro
-      - /etc/letsencrypt/live/butterflyeffect.o-r.kr/privkey.pem:/etc/nginx/ssl/server.key:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # - /etc/letsencrypt/live/butterflyeffect.o-r.kr/fullchain.pem:/etc/nginx/ssl/server.crt:ro
+      # - /etc/letsencrypt/live/butterflyeffect.o-r.kr/privkey.pem:/etc/nginx/ssl/server.key:ro
       - certbot-var:/var/www/certbot:ro
     environment:
       # Neo4j
