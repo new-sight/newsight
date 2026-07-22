@@ -341,8 +341,11 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
         // Find entities in PostgreSQL database using JpaRepository.findAllById
         java.util.List<com.example.newsAIAgents.domain.NewsEntity> entities = newsJpaRepository.findAllById(newsIds);
         
+        // 컬렉션이 불변(immutable)일 경우 정렬 시 UnsupportedOperationException 방지를 위해 가변 리스트로 복사
+        java.util.List<com.example.newsAIAgents.domain.NewsEntity> mutableEntities = new java.util.ArrayList<>(entities);
+        
         // Sort entities in publishedAt descending order to maintain consistency
-        entities.sort((a, b) -> {
+        mutableEntities.sort((a, b) -> {
             LocalDateTime atA = a.getPublishedAt();
             LocalDateTime atB = b.getPublishedAt();
             if (atA == null && atB == null) return 0;
@@ -351,7 +354,7 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
             return atB.compareTo(atA); // Descending order
         });
         
-        return entities;
+        return mutableEntities;
     }
 
     private String cleanJsonString(String rawJson) {
