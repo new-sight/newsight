@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
-import DashboardPage from "./features/dashboard/DashboardPage.tsx";
+import DashboardPage from "./features/dashboard/ui/DashboardPage.tsx";
 import PredictionPage from "./features/prediction/PredictionPage.tsx";
 import NewsPage from "./features/news/NewsPage.tsx";
 
