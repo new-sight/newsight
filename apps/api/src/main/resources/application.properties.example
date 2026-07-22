@@ -30,3 +30,4 @@ spring.data.redis.port=${REDIS_PORT:6379}
 spring.datasource.hikari.max-lifetime=55000
 spring.datasource.hikari.keepalive-time=30000
 spring.datasource.hikari.validation-timeout=3000
+spring.datasource.hikari.data-source-properties.prepareThreshold=0
