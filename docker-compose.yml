@@ -11,11 +11,13 @@ services:
     depends_on:
       - redis
     volumes:
-      # Let's Encrypt 실운영 인증서 적용 시 호스트 경로를 매핑하여 사용 (도메인 주소로 교체 필요)
-      # - /etc/letsencrypt/live/yourdomain.com/fullchain.pem:/etc/nginx/ssl/server.crt:ro
-      # - /etc/letsencrypt/live/yourdomain.com/privkey.pem:/etc/nginx/ssl/server.key:ro
-      # Certbot 자동 갱신(ACME 챌린지) 웹루트 공유 볼륨
-      # - /var/www/certbot:/var/www/certbot:ro
+      # [선택 1] 로컬 개발 환경: mkcert 등으로 생성한 외부 인증서를 주입하려면 주석을 해제하세요.
+      # - ./certs/localhost.crt:/etc/nginx/ssl/server.crt:ro
+      # - ./certs/localhost.key:/etc/nginx/ssl/server.key:ro
+
+      # [선택 2] 운영 환경: Certbot Let's Encrypt 인증서 자동 갱신 시 볼륨 마운트
+      - certbot-etc:/etc/nginx/ssl:ro
+      - certbot-var:/var/www/certbot:ro
     environment:
       # Neo4j
       - NEO4J_URI=${NEO4J_URI}
@@ -53,3 +55,17 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+
+  certbot:
+    image: certbot/certbot
+    container_name: news-ai-certbot
+    restart: always
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/www/certbot
+    # 12시간마다 인증서 자동 갱신 체크를 수행하도록 무한 루프 설정
+    entrypoint: "/bin/sh -c 'trap exit 0; SIGTERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  certbot-etc:
+  certbot-var:
