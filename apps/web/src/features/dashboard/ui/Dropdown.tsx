@@ -19,7 +19,8 @@ export default function Dropdown<T extends string>({
   useEffect(() => {
     if (!open) return;
     const onOutside = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      if (rootRef.current && !rootRef.current.contains(e.target as Node))
+        setOpen(false);
     };
     const onEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -39,7 +40,10 @@ export default function Dropdown<T extends string>({
   };
 
   return (
-    <div ref={rootRef} className="relative inline-flex items-center gap-2 text-[12.5px] font-semibold text-text-muted">
+    <div
+      ref={rootRef}
+      className="relative inline-flex items-center gap-2 text-[12.5px] font-semibold text-text-muted"
+    >
       {label}
       <button
         type="button"
@@ -49,7 +53,14 @@ export default function Dropdown<T extends string>({
         className="flex items-center gap-2 rounded-[3px] border border-border bg-white/5 px-2.5 py-1.5 text-[12.5px] font-semibold text-text"
       >
         {display}
-        <span className={"text-[16px] leading-none transition-transform " + (open ? "rotate-180" : "")}>▾</span>
+        <span
+          className={
+            "text-[16px] leading-none transition-transform " +
+            (open ? "rotate-180" : "")
+          }
+        >
+          ▾
+        </span>
       </button>
       {open && (
         <ul
@@ -64,7 +75,9 @@ export default function Dropdown<T extends string>({
               onClick={() => pick("all")}
               className={
                 "block w-full px-3 py-1.5 text-left text-[12.5px] font-semibold " +
-                (value === "all" ? "bg-accent/15 text-accent" : "text-text-muted hover:bg-white/5")
+                (value === "all"
+                  ? "bg-accent/15 text-accent"
+                  : "text-text-muted hover:bg-white/5")
               }
             >
               전체
@@ -79,7 +92,9 @@ export default function Dropdown<T extends string>({
                 onClick={() => pick(opt)}
                 className={
                   "block w-full px-3 py-1.5 text-left text-[12.5px] font-semibold " +
-                  (value === opt ? "bg-accent/15 text-accent" : "text-text-muted hover:bg-white/5")
+                  (value === opt
+                    ? "bg-accent/15 text-accent"
+                    : "text-text-muted hover:bg-white/5")
                 }
               >
                 {labels?.[opt] ?? opt}

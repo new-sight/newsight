@@ -136,12 +136,24 @@ export default function DashboardPage() {
               <div className="mb-2 text-[15px] leading-snug text-text">
                 {n.title}
               </div>
-              <span
-                className="font-mono text-[11px] font-semibold tracking-wide"
-                style={{ color: CAT_COLOR_VAR[n.category] }}
-              >
-                {CATEGORY_LABELS[n.category]}
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className="font-mono text-[11px] font-semibold tracking-wide"
+                  style={{ color: CAT_COLOR_VAR[n.category] }}
+                >
+                  {CATEGORY_LABELS[n.category]}
+                </span>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  {n.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-[3px] bg-white/5 px-1.5 py-0.5 text-[11px] text-text-muted"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </a>
           ))}
         </div>

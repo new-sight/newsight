@@ -8,6 +8,7 @@ export type NewsListItem = {
   category: NewsCategory;
   publishedAt: string;
   link: string;
+  tags: string[];
 };
 
 export type NewsListResponse = {
