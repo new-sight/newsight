@@ -15,9 +15,10 @@ services:
       # - ./certs/localhost.crt:/etc/nginx/ssl/server.crt:ro
       # - ./certs/localhost.key:/etc/nginx/ssl/server.key:ro
 
-      # [선택 2] 운영 환경: Certbot Let's Encrypt 인증서 자동 갱신 시 볼륨 마운트
-      - certbot-etc:/etc/nginx/ssl:ro
-      - certbot-var:/var/www/certbot:ro
+      # [선택 2] 운영 환경: Let's Encrypt 인증서 마운트 (최초 발급 시점에는 주석 처리 후 Step 3 수행)
+      # - /etc/letsencrypt/live/butterflyeffect.o-r.kr/fullchain.pem:/etc/nginx/ssl/server.crt:ro
+      # - /etc/letsencrypt/live/butterflyeffect.o-r.kr/privkey.pem:/etc/nginx/ssl/server.key:ro
+      # - certbot-var:/var/www/certbot:ro
     environment:
       # Neo4j
       - NEO4J_URI=${NEO4J_URI}
