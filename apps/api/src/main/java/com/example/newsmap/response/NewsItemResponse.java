@@ -35,7 +35,7 @@ public record NewsItemResponse(
             return List.of();
         }
         return Arrays.stream(tags.split(","))
-                .map(String::trim)
+                .map(t -> t.trim())
                 .filter(t -> !t.isEmpty())
                 .toList();
     }
