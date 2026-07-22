@@ -1,5 +1,9 @@
-package com.example.demo.mapnews;
+package com.example.newsmap.controller;
 
+import com.example.newsmap.domain.Category;
+import com.example.newsmap.domain.Country;
+import com.example.newsmap.response.NewsListResponse;
+import com.example.newsmap.service.NewsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,8 +20,10 @@ public class NewsController {
     @GetMapping("/list")
     public NewsListResponse getNewsList(
             @RequestParam(required = false) Country country,
-            @RequestParam(required = false) Category category
+            @RequestParam(required = false) Category category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        return newsService.getNewsList(country, category);
+        return newsService.getNewsList(country, category, page, size);
     }
 }

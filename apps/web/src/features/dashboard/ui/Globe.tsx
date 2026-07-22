@@ -1,15 +1,16 @@
-import type { Country, NewsCategory } from "../data";
+import type { Country } from "../data";
+import type { CountryStat } from "../hooks/useCountryNewsStats";
 import CategoryLegend from "./CategoryLegend";
 import GlobeScene from "./GlobeScene";
 
 export default function Globe({
   countryFilter,
-  categoryFilter,
+  stats,
   rotBarRef,
   onRotationChange,
 }: {
   countryFilter: Country | "all";
-  categoryFilter: NewsCategory | "all";
+  stats: CountryStat[];
   rotBarRef: React.RefObject<HTMLDivElement | null>;
   onRotationChange: (deg: number) => void;
 }) {
@@ -17,7 +18,7 @@ export default function Globe({
     <div className="mt-2">
       <GlobeScene
         countryFilter={countryFilter}
-        categoryFilter={categoryFilter}
+        stats={stats}
         rotBarRef={rotBarRef}
         onRotationChange={onRotationChange}
       />

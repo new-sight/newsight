@@ -1,28 +1,28 @@
-package com.example.demo.mapnews;
+package com.example.newsmap.response;
 
-import java.time.OffsetDateTime;
-import java.util.List;
+import com.example.newsmap.domain.Category;
+import com.example.newsmap.domain.Country;
+import com.example.newsmap.domain.NewsArticle;
+import java.time.LocalDateTime;
 
 public record NewsItemResponse(
-        Long newsId,
+        String newsId,
         String title,
         String source,
         Country country,
-        String city,
         Category category,
-        OffsetDateTime publishedAt,
-        List<String> relatedStocks
+        LocalDateTime publishedAt,
+        String link
 ) {
-    static NewsItemResponse from(NewsArticle article) {
+    public static NewsItemResponse from(NewsArticle article) {
         return new NewsItemResponse(
                 article.getId(),
                 article.getTitle(),
                 article.getSource(),
                 article.getCountry(),
-                article.getCity(),
                 article.getCategory(),
                 article.getPublishedAt(),
-                article.getRelatedStocks()
+                article.getLink()
         );
     }
 }

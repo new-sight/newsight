@@ -1,22 +1,23 @@
-import type { Country, NewsCategory } from "../data";
+import type { Country } from "../data";
+import type { CountryStat } from "../hooks/useCountryNewsStats";
 import { useGlobeScene, webglSupported } from "../hooks/useGlobeScene";
 import GlobeBubble from "./GlobeBubble";
 import WebglFallback from "./WebglFallback";
 
 export default function GlobeScene({
   countryFilter,
-  categoryFilter,
+  stats,
   rotBarRef,
   onRotationChange,
 }: {
   countryFilter: Country | "all";
-  categoryFilter: NewsCategory | "all";
+  stats: CountryStat[];
   rotBarRef: React.RefObject<HTMLDivElement | null>;
   onRotationChange: (deg: number) => void;
 }) {
   const { wrapRef, bubbles } = useGlobeScene({
     countryFilter,
-    categoryFilter,
+    stats,
     rotBarRef,
     onRotationChange,
   });

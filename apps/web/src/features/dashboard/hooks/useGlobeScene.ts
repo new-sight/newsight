@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import {
   CAT_COLOR_HEX,
-  CITY_TO_COUNTRY,
-  NEWS,
-  REGIONS,
-  REGION_COORDS,
+  COUNTRY_COORDS,
+  COUNTRY_LABELS,
+  COUNTRY_OPTIONS,
   type Country,
-  type NewsCategory,
 } from "../data";
+import type { CountryStat } from "./useCountryNewsStats";
 
 const DIM_COLOR = 0x3a4a52;
 const TILT_X = 0.35;
@@ -28,7 +27,7 @@ export type Bubble = {
   flip: boolean;
 };
 type GlobeApi = {
-  updateHighlight: (country: Country | "all", category: NewsCategory | "all") => void;
+  updateHighlight: (country: Country | "all", stats: CountryStat[]) => void;
 };
 
 function clamp(v: number, min: number, max: number): number {
@@ -69,22 +68,10 @@ function findBubbleSlot(
     if (!collided) return { anchorY: candidateY, top, bottom };
   }
   // ponytail: more concurrently-visible bubbles than vertical slots fit in the
-  // container -- pin to the top edge rather than overflow. Rare with <=7 regions.
+  // container -- pin to the top edge rather than overflow. Rare with <=4 countries.
   const pinnedY = EDGE_MARGIN + BUBBLE_GAP + BUBBLE_HEIGHT;
   const [top, bottom] = bubbleSpan(pinnedY);
   return { anchorY: pinnedY, top, bottom };
-}
-
-// A region's marker only shows when it has at least one news item matching the
-// active category filter -- otherwise the circle would imply news that isn't there.
-function regionHasCategory(name: string, category: NewsCategory | "all"): boolean {
-  return category === "all" || NEWS.some((n) => n.location === name && n.category === category);
-}
-function regionHeadline(name: string, category: NewsCategory | "all"): string {
-  const item = NEWS.find(
-    (n) => n.location === name && (category === "all" || n.category === category),
-  );
-  return item?.headline ?? "";
 }
 
 function hasWebGL(): boolean {
@@ -103,19 +90,19 @@ export const webglSupported = hasWebGL();
 // mount element plus the bubbles to render as overlay DOM elements.
 export function useGlobeScene({
   countryFilter,
-  categoryFilter,
+  stats,
   rotBarRef,
   onRotationChange,
 }: {
   countryFilter: Country | "all";
-  categoryFilter: NewsCategory | "all";
+  stats: CountryStat[];
   rotBarRef: React.RefObject<HTMLDivElement | null>;
   onRotationChange: (deg: number) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<GlobeApi | null>(null);
   const countryFilterRef = useRef(countryFilter);
-  const categoryFilterRef = useRef(categoryFilter);
+  const statsRef = useRef(stats);
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
 
   useEffect(() => {
@@ -182,17 +169,17 @@ export function useGlobeScene({
     );
 
     const markerMeshes: Record<
-      string,
+      Country,
       THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>
-    > = {};
-    REGIONS.forEach((r) => {
-      const [lat, lon] = REGION_COORDS[r.name];
+    > = {} as Record<Country, THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>;
+    COUNTRY_OPTIONS.forEach((country) => {
+      const [lat, lon] = COUNTRY_COORDS[country];
       const phi = ((90 - lat) * Math.PI) / 180;
       const theta = ((lon + 180) * Math.PI) / 180;
       const rad = 1.02;
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(0.024, 14, 14),
-        new THREE.MeshBasicMaterial({ color: CAT_COLOR_HEX[r.dominant] }),
+        new THREE.MeshBasicMaterial({ color: DIM_COLOR }),
       );
       mesh.position.set(
         -rad * Math.sin(phi) * Math.cos(theta),
@@ -200,32 +187,28 @@ export function useGlobeScene({
         rad * Math.sin(phi) * Math.sin(theta),
       );
       group.add(mesh);
-      markerMeshes[r.name] = mesh;
+      markerMeshes[country] = mesh;
     });
 
     const renderThree = () => renderer.render(scene, camera);
 
-    const computeBubbles = (
-      activeCountry: Country | "all",
-      activeCategory: NewsCategory | "all",
-    ) => {
+    const computeBubbles = (activeCountry: Country | "all", activeStats: CountryStat[]) => {
       const cw = wrap.clientWidth;
       const ch = wrap.clientHeight;
       const next: Bubble[] = [];
-      REGIONS.forEach((r) => {
-        const active =
-          (activeCountry === "all" || CITY_TO_COUNTRY[r.name] === activeCountry) &&
-          regionHasCategory(r.name, activeCategory);
-        if (!active) return;
+      const visibleStats = activeStats.filter(
+        (stat) => activeCountry === "all" || stat.country === activeCountry,
+      );
+      visibleStats.forEach((stat) => {
         const worldPos = new THREE.Vector3();
-        markerMeshes[r.name].getWorldPosition(worldPos);
+        markerMeshes[stat.country].getWorldPosition(worldPos);
         if (worldPos.z < 0.15) return;
         const proj = worldPos.clone().project(camera);
         if (proj.x < -0.92 || proj.x > 0.92 || proj.y < -0.92 || proj.y > 0.92)
           return;
         next.push({
-          name: r.name,
-          headline: regionHeadline(r.name, activeCategory),
+          name: COUNTRY_LABELS[stat.country],
+          headline: stat.headline,
           x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
           y: (1 - (proj.y * 0.5 + 0.5)) * ch,
           flip: false,
@@ -242,30 +225,26 @@ export function useGlobeScene({
       setBubbles(next);
     };
 
-    const updateHighlight = (
-      activeCountry: Country | "all",
-      activeCategory: NewsCategory | "all",
-    ) => {
-      REGIONS.forEach((r) => {
-        const mesh = markerMeshes[r.name];
-        const hasCategory = regionHasCategory(r.name, activeCategory);
-        mesh.visible = hasCategory;
-        if (!hasCategory) return;
-        const countryActive =
-          activeCountry === "all" || CITY_TO_COUNTRY[r.name] === activeCountry;
-        const color = activeCategory === "all" ? r.dominant : activeCategory;
-        mesh.material.color.set(countryActive ? CAT_COLOR_HEX[color] : DIM_COLOR);
+    const updateHighlight = (activeCountry: Country | "all", activeStats: CountryStat[]) => {
+      const statByCountry = new Map(activeStats.map((s) => [s.country, s]));
+      COUNTRY_OPTIONS.forEach((country) => {
+        const mesh = markerMeshes[country];
+        const stat = statByCountry.get(country);
+        mesh.visible = !!stat;
+        if (!stat) return;
+        const countryActive = activeCountry === "all" || country === activeCountry;
+        mesh.material.color.set(countryActive ? CAT_COLOR_HEX[stat.dominant] : DIM_COLOR);
         mesh.scale.setScalar(countryActive ? 1 : 0.6);
       });
       renderThree();
-      computeBubbles(activeCountry, activeCategory);
+      computeBubbles(activeCountry, activeStats);
     };
     apiRef.current = { updateHighlight };
 
     const applyFrame = () => {
       group.rotation.y = rotationY;
       renderThree();
-      computeBubbles(countryFilterRef.current, categoryFilterRef.current);
+      computeBubbles(countryFilterRef.current, statsRef.current);
       onRotationChange(
         Math.round(((((rotationY * 180) / Math.PI) % 360) + 360) % 360),
       );
@@ -311,12 +290,12 @@ export function useGlobeScene({
       camera.updateProjectionMatrix();
       renderer.setSize(rw, rh);
       renderThree();
-      computeBubbles(countryFilterRef.current, categoryFilterRef.current);
+      computeBubbles(countryFilterRef.current, statsRef.current);
     });
     resizeObserver.observe(wrap);
 
     renderThree();
-    updateHighlight(countryFilterRef.current, categoryFilterRef.current);
+    updateHighlight(countryFilterRef.current, statsRef.current);
     onRotationChange(
       Math.round(((((rotationY * 180) / Math.PI) % 360) + 360) % 360),
     );
@@ -334,7 +313,7 @@ export function useGlobeScene({
         wrap.removeChild(renderer.domElement);
       apiRef.current = null;
     };
-    // Scene is built once; countryFilter/categoryFilter are read via refs so drag/resize
+    // Scene is built once; countryFilter/stats are read via refs so drag/resize
     // handlers created here always see the latest value without re-mounting three.js.
     // rotBarRef/onRotationChange are expected to stay referentially stable across
     // renders (a useRef object and a useState setter, respectively).
@@ -342,9 +321,9 @@ export function useGlobeScene({
 
   useEffect(() => {
     countryFilterRef.current = countryFilter;
-    categoryFilterRef.current = categoryFilter;
-    apiRef.current?.updateHighlight(countryFilter, categoryFilter);
-  }, [countryFilter, categoryFilter]);
+    statsRef.current = stats;
+    apiRef.current?.updateHighlight(countryFilter, stats);
+  }, [countryFilter, stats]);
 
   return { wrapRef, bubbles };
 }
