@@ -32,28 +32,19 @@ class NewsExtractor:
         Gemma 4를 사용하여 뉴스를 분석하고 한국어 번역 제목, 요약, 태그, 관계 정보를 JSON으로 추출합니다.
         """
         prompt = (
-            "[System: You are an expert News Ontology Agent. Analyze the article and return ONLY a valid JSON object matching the requested schema. No conversational text.]\n\n"
-            "다음 뉴스 기사를 분석해서 요구한 JSON 포맷으로 응답해줘. 만약 기사 제목과 본문이 영어, 중국어, 일본어 등의 외국어로 되어 있다면 기사 제목을 가장 자연스러운 한국어로 번역해서 translatedTitle에 넣어줘. 한국어 기사라면 원본 제목 그대로 제공해줘. 요약(summary) 또한 반드시 기사 전체 내용을 반영하여 한국어로 작성해줘.\n"
-            "태그는 고유 명사나 핵심 기술명 위주로 추출하고, 각 태그의 대표 표준명(master)을 함께 제공해줘.\n"
-            "특히 태그의 이름(name)과 대표 표준명(master)은 영어 명칭이나 티커 코드 대신, 반드시 친숙한 한국어(한글) 명칭(예: 'NVIDIA' -> '엔비디아', 'Apple' -> '애플', 'Microsoft' -> '마이크로소프트', 'Tesla' -> '테슬라', 'Toyota' -> '도요타', 'Samsung Electronics' -> '삼성전자')으로 변환하여 기재해줘.\n"
-            "또한, 기사 내용이 주식 시장이나 기업 가치에 미치는 감성 점수(sentimentScore)를 -1.0(매우 부정/악재)에서 1.0(매우 긍정/호재) 사이의 실수값으로 평가해서 포함해줘. 중립인 경우 0.0을 제공해줘.\n"
-            "기사 본문에서 기업 간의 비즈니스 관계가 나타나는 경우, 다음 다섯 가지 관계 유형(type) 중 하나로 매핑하여 relations에 포함해줘:\n"
-            "1. SUBSIDIARY_OF: 자회사, 지분 투자 관계 (방향: 피투자사/자회사 -> 투자사/모회사. 예: B사가 A사에 인수됨 -> source: 'B사', target: 'A사', type: 'SUBSIDIARY_OF')\n"
-            "2. SUPPLIES_TO: 공급 계약, 납품, 부품 공급 관계 (방향: 공급사 -> 고객사. 예: A사가 B사에 장비를 공급함 -> source: 'A사', target: 'B사', type: 'SUPPLIES_TO')\n"
-            "3. PARTNER_WITH: 기술 제휴, 공동 연구, MOU, 파트너십 관계 (방향에 상관없이 A사와 B사가 협력함 -> source: 'A사', target: 'B사', type: 'PARTNER_WITH')\n"
-            "4. COMPETE_WITH: 시장 내 경쟁 관계, 특허 소송, 경쟁사 (방향에 상관없이 A사와 B사가 경쟁함 -> source: 'A사', target: 'B사', type: 'COMPETE_WITH')\n"
-            "5. RELATED_TO: 그 외의 일반적인 연관 관계 (위의 네 범주에 명확하게 속하지 않는 경우)\n\n"
+            "[System: Analyze news and return ONLY a valid JSON object matching the requested schema. No conversational text.]\n\n"
+            "요구사항:\n"
+            "1. translatedTitle: 외국어 기사 제목은 자연스러운 한국어로 번역 (한국어면 원본 유지)\n"
+            "2. summary: 기사 내용을 반영한 한 줄 한국어 요약\n"
+            "3. sentimentScore: 주식/기업가치 영향도 (-1.0:악재 ~ 1.0:호재, 중립:0.0)\n"
+            "4. tags: 고유명사/기술명 태그. name과 master는 모두 친숙한 한글 명칭으로 변환 (예: Apple->애플, Tesla->테슬라)\n"
+            "5. relations: 기업 간 관계 추출 (type: SUBSIDIARY_OF | SUPPLIES_TO | PARTNER_WITH | COMPETE_WITH | RELATED_TO)\n\n"
             "{\n"
-            '  "translatedTitle": "한국어로 번역된 기사 제목 (한국어 기사인 경우 원본 제목 그대로)",\n'
-            '  "summary": "뉴스 기사 한 줄 한국어 요약 텍스트",\n'
-            '  "sentimentScore": 0.8,\n'
-            '  "tags": [\n'
-            '    {"name": "태그명1", "master": "대표표준명1"},\n'
-            '    {"name": "태그명2", "master": "대표표준명2"}\n'
-            "  ],\n"
-            '  "relations": [\n'
-            '    {"source": "대표표준명1", "target": "대표표준명2", "type": "RELATED_TO"}\n'
-            "  ]\n"
+            '  "translatedTitle": "한국어 제목",\n'
+            '  "summary": "한 줄 요약",\n'
+            '  "sentimentScore": 0.0,\n'
+            '  "tags": [{"name": "태그명", "master": "표준한글명"}],\n'
+            '  "relations": [{"source": "A사", "target": "B사", "type": "RELATED_TO"}]\n'
             "}\n\n"
             f"[기사 제목]: {title}\n"
             f"[기사 본문]: {content}"
