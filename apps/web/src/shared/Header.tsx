@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "../assets/icons/logo.svg";
 import TickerTape from "./TickerTape";
+import HeaderLoginButton from "../features/Login/ui/HeaderLoginButton";
 
 const NAV_ITEMS = [
   { to: "/", label: "대시보드", end: true },
@@ -23,9 +24,9 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto border-b border-border bg-bg-panel px-4 py-4 sm:gap-6 sm:px-8">
+      <header className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto border-b border-border bg-bg-panel px-4 py-3 sm:gap-6 sm:px-8">
         <Link to="/" className="flex shrink-0 items-center gap-3">
-          <img src={logo} alt="newsight" className="h-[20px] w-auto" />
+          <img src={logo} alt="newsight" className="h-5 w-auto" />
           <div className="hidden text-[12.5px] text-text-muted md:block">
             뉴스 기반 주식 시장 예측 플랫폼
           </div>
@@ -39,10 +40,10 @@ export default function Header() {
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  "whitespace-nowrap border-b-2 pb-1 text-sm font-semibold " +
+                  "whitespace-nowrap border-b-2 py-1 text-sm font-semibold transition-colors " +
                   (isActive
                     ? "border-accent text-text"
-                    : "border-transparent text-text-muted")
+                    : "border-transparent text-text-muted hover:text-text")
                 }
               >
                 {label}
@@ -50,10 +51,9 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2.5 whitespace-nowrap font-mono text-[13px] text-text-muted sm:flex">
-            <span className="h-[7px] w-[7px] shrink-0 animate-pulse rounded-full bg-up" />
-            <span className="tracking-widest">LIVE</span>
-            <span>
+          <div className="hidden items-center gap-3 whitespace-nowrap font-mono text-[13px] text-text-muted sm:flex">
+            <HeaderLoginButton />
+            <span className="leading-none">
               {now.toLocaleTimeString("ko-KR", {
                 hour: "2-digit",
                 minute: "2-digit",

@@ -32,8 +32,8 @@ export default function NewsPage() {
           </div>
 
           <form onSubmit={handleSearchSubmit} className="relative group w-full">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-up rounded-2xl blur-md opacity-25 group-focus-within:opacity-75 transition duration-300"></div>
-            <div className="relative flex items-center bg-bg-panel border border-border rounded-xl px-4 py-3 shadow-2xl transition-all duration-300 group-focus-within:border-accent">
+            <div className="absolute -inset-0.5 bg-linear-to-r from-accent to-up rounded-2xl blur-md opacity-25 transition duration-300"></div>
+            <div className="relative flex items-center bg-bg-panel border border-border rounded-xl px-4 py-3 shadow-2xl transition-all duration-300">
               <span className="material-symbols-outlined text-text-muted text-[24px] mr-3 select-none">
                 search
               </span>
@@ -42,7 +42,7 @@ export default function NewsPage() {
                 placeholder="주식코드 입력 (예: AAPL, 005930)"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full bg-transparent text-white placeholder-text-muted border-none outline-none text-base sm:text-lg font-sans"
+                className="w-full bg-transparent placeholder-text-muted border-none outline-none text-base sm:text-lg font-sans"
                 autoFocus
               />
               <button
@@ -100,7 +100,7 @@ export default function NewsPage() {
       {/* 페이지 레벨에서 자연스럽게 스크롤되도록 고정 높이 제거 */}
       <div className="flex gap-6 items-start">
         {/* 왼쪽 주식 정보 컬럼 - 화면(뷰포트)에 고정되어 있으면서 내부 스크롤 지원 */}
-        <div className="w-[23rem] shrink-0 sticky top-6 h-[calc(100vh-100px)] flex flex-col">
+        <div className="w-92 shrink-0 sticky top-6 h-[calc(100vh-100px)] flex flex-col">
           <h1 className="text-lg font-semibold text-white tracking-wide mb-2 shrink-0">
             관련 주식 정보
           </h1>

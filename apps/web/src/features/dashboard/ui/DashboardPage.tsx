@@ -82,13 +82,13 @@ export default function DashboardPage() {
             <div
               ref={rotBarRef}
               title="드래그하여 지구본 회전"
-              className="relative h-[22px] w-[110px] touch-none cursor-ew-resize rounded-[3px] border border-border bg-bg"
+              className="relative h-5.5 w-27.5 touch-none cursor-ew-resize rounded-[3px] border border-border bg-bg"
               style={{
                 backgroundImage:
                   "repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 12px)",
               }}
             >
-              <div className="pointer-events-none absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 bg-accent" />
+              <div className="pointer-events-none absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-accent" />
             </div>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
           <div className="text-[12.5px] text-text-muted">{totalCount}건</div>
         </div>
 
-        <div className="flex min-h-[420px] flex-col gap-2">
+        <div className="flex min-h-105 flex-col gap-2">
           {news.length === 0 && (
             <div className="py-2.5 text-sm text-text-muted/70">
               해당 조건에 맞는 뉴스가 없습니다.
@@ -122,7 +122,7 @@ export default function DashboardPage() {
               href={n.link}
               target="_blank"
               rel="noreferrer"
-              className="rounded-[3px] border border-white/[0.06] border-l-[3px] bg-bg py-2.5 pr-3 pl-3.5"
+              className="rounded-[3px] border border-white/6 border-l-[3px] bg-bg py-2.5 pr-3 pl-3.5"
               style={{ borderLeftColor: CAT_COLOR_VAR[n.category] }}
             >
               <div className="mb-1.5 flex justify-between gap-2 text-xs text-text-muted">
@@ -164,7 +164,7 @@ export default function DashboardPage() {
               type="button"
               disabled={currentPage <= 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              className="font-mono text-base text-text disabled:text-text-muted/40"
+              className="font-mono text-base text-text"
               aria-label="이전 페이지"
             >
               ‹
@@ -176,7 +176,7 @@ export default function DashboardPage() {
               type="button"
               disabled={currentPage >= totalPages - 1}
               onClick={() => setPage((p) => p + 1)}
-              className="font-mono text-base text-text disabled:text-text-muted/40"
+              className="font-mono text-base text-text"
               aria-label="다음 페이지"
             >
               ›
