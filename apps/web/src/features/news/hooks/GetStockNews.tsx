@@ -28,7 +28,7 @@ export function useGetStockNews(stockCode: string | null | undefined) {
     setError(null);
     try {
       // Get news list with details from Spring Boot API (queries Neo4j and JPA under the hood)
-      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+      const baseUrl = import.meta.env.VITE_API_URL || "";
       const response = await axios.get<NewsItemData[]>(
         `${baseUrl}/api/news/list/${stockCode}`,
       );

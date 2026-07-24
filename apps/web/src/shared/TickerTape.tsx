@@ -23,7 +23,7 @@ type TickerQuote = Watchlist & {
 
 const REFRESH_INTERVAL_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 5_000;
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 function useTickerQuotes(watchlist: Watchlist[]) {
   const [quotes, setQuotes] = useState<TickerQuote[]>(
@@ -45,24 +45,38 @@ function useTickerQuotes(watchlist: Watchlist[]) {
             }>(`${API_BASE_URL}/api/stock/info/${w.ticker}`, {
               timeout: REQUEST_TIMEOUT_MS,
             });
+
             const price = res.data.error ? null : (res.data.price ?? null);
             const changePercent = res.data.error
               ? null
               : (res.data.changePercent ??
-                res.data.regularMarketChangePercent ??
-                null);
-            return { ...w, price, changePercent };
+                  res.data.regularMarketChangePercent ??
+                  null);
+
+            return {
+              ...w,
+              price,
+              changePercent,
+            };
           } catch {
-            return { ...w, price: null, changePercent: null };
+            return {
+              ...w,
+              price: null,
+              changePercent: null,
+            };
           }
         }),
       ).then((next) => {
-        if (!cancelled) setQuotes(next);
+        if (!cancelled) {
+          setQuotes(next);
+        }
       });
     };
 
     fetchQuotes();
+
     const id = setInterval(fetchQuotes, REFRESH_INTERVAL_MS);
+
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -86,7 +100,9 @@ export default function TickerTape() {
             className="inline-flex items-center gap-2 whitespace-nowrap border-r border-border px-5 font-mono text-[13px]"
           >
             <b className="font-semibold text-text">{item.name}</b>
+
             <span className="text-text-muted">{item.ticker}</span>
+
             <span className="font-semibold text-text">
               {item.price === null
                 ? "–"
@@ -94,6 +110,7 @@ export default function TickerTape() {
                     maximumFractionDigits: 2,
                   })}
             </span>
+
             <span
               className={
                 "font-semibold " +
