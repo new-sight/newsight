@@ -4,7 +4,6 @@ import uuid
 from dotenv import load_dotenv
 
 from scraper import GoogleNewsScraper
-from llm_filter import NewsLLMFilter
 from extractor import NewsExtractor
 from supabase_writer import SupabaseWriter
 from neo4j_writer import Neo4jWriter
@@ -35,7 +34,6 @@ def main():
 
     # 2. 컴포넌트 초기화
     scraper = GoogleNewsScraper()
-    llm_filter = NewsLLMFilter()
     extractor = NewsExtractor()
     sb_writer = SupabaseWriter()
     neo_writer = Neo4jWriter()
@@ -55,12 +53,7 @@ def main():
                     )
                     continue
 
-                # 2) 중복 기사 필터링 (LLM 활용)
-                print(f"[파이프라인] 중복 뉴스 필터링 진행 중...")
-                unique_news = llm_filter.filter_similar_news(raw_news)
-                print(
-                    f"[파이프라인] 중복 제거 결과: {len(raw_news)}개 중 {len(unique_news)}개 대표 기사 선정"
-                )
+                unique_news = raw_news
 
                 # 4) 각 고유 뉴스에 대해 상세 요약, 번역 및 온톨로지 정보 추출
                 for idx, news_item in enumerate(unique_news):
