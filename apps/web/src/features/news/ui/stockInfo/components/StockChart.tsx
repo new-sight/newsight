@@ -47,7 +47,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
 
   if (loading) {
     return (
-      <div className="w-full h-[13rem] border border-border/80 bg-bg-panel/20 rounded-xl flex items-center justify-center text-text-muted text-xs animate-pulse">
+      <div className="w-full h-52 border border-border/80 bg-bg-panel/20 rounded-xl flex items-center justify-center text-text-muted text-xs animate-pulse">
         차트 데이터를 불러오는 중...
       </div>
     );
@@ -55,7 +55,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
 
   if (error || !data || !data.prices || data.prices.length === 0) {
     return (
-      <div className="w-full h-[13rem] border border-border/80 bg-bg-panel/20 rounded-xl flex items-center justify-center text-text-muted text-xs p-4 text-center">
+      <div className="w-full h-52 border border-border/80 bg-bg-panel/20 rounded-xl flex items-center justify-center text-text-muted text-xs p-4 text-center">
         {error ? `차트 오류: ${error}` : "차트 데이터를 표시할 수 없습니다."}
       </div>
     );
@@ -74,7 +74,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
 
   if (validData.length === 0) {
     return (
-      <div className="w-full h-[13rem] border border-border/80 bg-bg-panel/20 rounded-xl flex items-center justify-center text-text-muted text-xs">
+      <div className="w-full h-52 border border-border/80 bg-bg-panel/20 rounded-xl flex items-center justify-center text-text-muted text-xs">
         유효한 가격 데이터가 없습니다.
       </div>
     );
@@ -183,7 +183,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
         </span>
       </div>
 
-      <div className="w-full h-[10rem] relative">
+      <div className="w-full h-40 relative">
         <svg
           className="w-full h-full cursor-crosshair overflow-visible"
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
