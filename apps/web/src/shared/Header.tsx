@@ -24,7 +24,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto border-b border-border bg-bg-panel px-4 py-3 sm:gap-6 sm:px-8">
+      <header className="relative z-50 flex flex-nowrap items-center justify-between gap-3 border-b border-border bg-bg-panel px-4 py-3 sm:gap-6 sm:px-8">
         <Link to="/" className="flex shrink-0 items-center gap-3">
           <img src={logo} alt="newsight" className="h-5 w-auto" />
           <div className="hidden text-[12.5px] text-text-muted md:block">
@@ -33,7 +33,7 @@ export default function Header() {
         </Link>
 
         <div className="flex shrink-0 flex-nowrap items-center gap-4 sm:gap-10">
-          <nav className="flex flex-nowrap items-center gap-3 sm:gap-7">
+          <nav className="flex flex-nowrap items-center gap-3 overflow-x-auto sm:gap-7">
             {NAV_ITEMS.map(({ to, label, end }) => (
               <NavLink
                 key={to}

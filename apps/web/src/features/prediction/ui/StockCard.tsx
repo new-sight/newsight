@@ -44,9 +44,7 @@ export default function StockCard({ item, rank, tone }: StockCardProps) {
         )}
       </div>
 
-      <p className="mt-4 text-[17px] leading-8 text-zinc-300">
-        {item.reason}
-      </p>
+      <p className="mt-4 text-[17px] leading-8 text-zinc-300">{item.reason}</p>
     </article>
   );
 }
