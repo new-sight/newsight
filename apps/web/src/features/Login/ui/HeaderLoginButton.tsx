@@ -114,7 +114,7 @@ export default function HeaderLoginButton() {
               >
                 account_circle
               </span>
-              <span className="tracking-tight">내 정보</span>
+              <span className="tracking-tight">마이페이지</span>
             </Link>
 
             {/* 메뉴 항목 2: 좋아요 */}

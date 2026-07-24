@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchMyInfo } from "./api/MyInfo";
+import { fetchMyInfo, type MyInfoItem } from "./api/MyInfo";
 import MyPageBox from "./ui/mypage/MyPageBox";
 
 export default function MyPage() {
   const [activeTab, setActiveTab] = useState<"profile" | "activity">("profile");
-  const [user] = useState(() => {
-    return {
-      username: localStorage.getItem("username") || "사용자",
-      loginId: localStorage.getItem("loginId") || "user",
-    };
-  });
+  const [myInfo, setMyInfo] = useState<MyInfoItem | null>(null);
+
+  const storedLoginId = localStorage.getItem("loginId");
+  const storedUsername = localStorage.getItem("username");
+  const queryParam = storedLoginId || storedUsername || undefined;
+
+  useEffect(() => {
+    fetchMyInfo(queryParam)
+      .then((data) => {
+        console.log("마이페이지 데이터 수신 성공:", data);
+        setMyInfo(data);
+      })
+      .catch((err) => console.error("마이페이지 정보 조회 실패:", err));
+  }, [queryParam]);
 
   return (
     <div className="flex w-full min-h-[calc(100vh-4rem)] bg-bg-panel text-white rounded-[10px] overflow-hidden">
@@ -69,12 +77,24 @@ export default function MyPage() {
 
           {/* 회원 프로필 요약 카드 */}
           <div className="w-full rounded-[10px] border border-white/2 bg-white/2 p-6 sm:p-8 flex flex-col gap-3 backdrop-blur-sm shadow-xl">
-            <MyPageBox label="아이디" value="ththth****" />
-            <MyPageBox label="이름" value="UJuns" />
-            <MyPageBox label="이메일" value="asdf@asdf.com" />
-            <MyPageBox label="전화번호" value="010-1234-5678" />
-            <MyPageBox label="가입일" value="2026-07-24" />
-            <MyPageBox label="유저구분" value="일반회원" />
+            <MyPageBox
+              label="아이디"
+              value={myInfo?.loginId || storedLoginId || "-"}
+            />
+            <MyPageBox
+              label="이름"
+              value={myInfo?.username || storedUsername || "-"}
+            />
+            <MyPageBox label="이메일" value={myInfo?.email || "-"} />
+            <MyPageBox label="전화번호" value={myInfo?.phone || "-"} />
+            <MyPageBox
+              label="가입일"
+              value={myInfo?.createdAt ? myInfo.createdAt.split("T")[0] : "-"}
+            />
+            <MyPageBox
+              label="유저구분"
+              value={myInfo?.role === "ROLE_ADMIN" ? "관리자" : "일반회원"}
+            />
           </div>
         </div>
       </main>
