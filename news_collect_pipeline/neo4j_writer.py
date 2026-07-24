@@ -186,24 +186,31 @@ class Neo4jWriter:
         record = result.single()
         if not record:
             return None
-        
+
         stock_name = record["stockName"]
         stock_kor_name = record.get("stockKorName")
         ticker = record["ticker"]
-        
+
         # tag의 name이 한글이고 s.kor_name이 아직 한글이 아니거나 영어 사명과 같은 경우 업데이트 진행
         import re
-        has_korean = lambda s: bool(re.search('[ㄱ-ㅎㅏ-ㅣ가-힣]', s)) if s else False
-        
-        if has_korean(name) and (not stock_kor_name or not has_korean(stock_kor_name) or stock_kor_name == stock_name):
+
+        has_korean = lambda s: bool(re.search("[ㄱ-ㅎㅏ-ㅣ가-힣]", s)) if s else False
+
+        if has_korean(name) and (
+            not stock_kor_name
+            or not has_korean(stock_kor_name)
+            or stock_kor_name == stock_name
+        ):
             update_query = """
             MATCH (s:Stock {ticker: $ticker})
             SET s.kor_name = $kor_name
             """
             tx.run(update_query, ticker=ticker, kor_name=name)
             stock_kor_name = name
-            print(f"[Neo4jWriter] Dynamically updated Stock '{ticker}' kor_name to '{name}'")
-            
+            print(
+                f"[Neo4jWriter] Dynamically updated Stock '{ticker}' kor_name to '{name}'"
+            )
+
         return stock_kor_name if stock_kor_name else stock_name
 
     @staticmethod
@@ -265,7 +272,10 @@ class Neo4jWriter:
         MATCH (newNews:News {id: $newNewsId})-[:HAS_TAG]->(t:Tag)<-[:HAS_TAG]-(existingNews:News)
         WHERE newNews <> existingNews
         WITH existingNews, newNews, count(t) as commonCount
-        WHERE commonCount >= 1
+        WHERE commonCount >= 2
+        WITH existingNews, newNews, commonCount
+        ORDER BY commonCount DESC
+        LIMIT 5
         MERGE (newNews)-[:RELATED_NEWS]->(existingNews)
         MERGE (existingNews)-[:RELATED_NEWS]->(newNews)
         """

@@ -78,6 +78,8 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
         return ollamaCloudService.queryGemma4ForReasoning(prompt);
     }
 
+    private static final java.util.concurrent.ExecutorService TRACK_EXECUTOR = java.util.concurrent.Executors.newFixedThreadPool(4);
+
     @Override
     public String generateWeeklyBriefingWithoutAlgorithm() {
         log.info("[Weekly LLM Briefing] Redis 캐시 확인 시도");
@@ -92,108 +94,171 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
             log.warn("[Weekly LLM Briefing] Redis 캐시 읽기 실패", e);
         }
 
-        log.info("[Weekly LLM Briefing] 각 트랙별 조건에 따른 Neo4j 지식 그래프 데이터 조회 시작");
+        log.info("[Weekly LLM Briefing] 4개 트랙 병렬 비동기(CompletableFuture) 분석 및 추론 개시");
 
-        // 1. 쿼리 실행 및 데이터 수집
-        // Track 1: 어제와 오늘의 호재 뉴스 (최근 2일 이내, 감성점수 >= 0.5)
+        // Track 1: 어제와 오늘의 호재 뉴스 (최근 2일 이내, 감성점수 >= 0.5, 최대 100개 수집)
         String track1Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
                 "WHERE n.createdAt >= datetime() - duration('P2D') AND n.sentimentScore >= 0.5 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
                 "LIMIT 100";
-        List<Map<String, Object>> track1Data = new java.util.ArrayList<>(neo4jClient.query(track1Query).fetch().all());
 
-        // Track 2: 지난 일주일간 호재 뉴스 (최근 7일 이내, 감성점수 >= 0.4)
+        // Track 2: 지난 일주일간 호재 뉴스 (최근 7일 이내, 감성점수 >= 0.4, 최대 200개 수집)
         String track2Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
                 "WHERE n.createdAt >= datetime() - duration('P7D') AND n.sentimentScore >= 0.4 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
-                "LIMIT 100";
-        List<Map<String, Object>> track2Data = new java.util.ArrayList<>(neo4jClient.query(track2Query).fetch().all());
+                "LIMIT 200";
 
-        // Track 3: 어제와 오늘의 악재 뉴스 (최근 2일 이내, 감성점수 <= -0.5)
+        // Track 3: 어제와 오늘의 악재 뉴스 (최근 2일 이내, 감성점수 <= -0.5, 최대 100개 수집)
         String track3Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
                 "WHERE n.createdAt >= datetime() - duration('P2D') AND n.sentimentScore <= -0.5 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
                 "LIMIT 100";
-        List<Map<String, Object>> track3Data = new java.util.ArrayList<>(neo4jClient.query(track3Query).fetch().all());
 
-        // Track 4: 지난 일주일간 악재 뉴스 (최근 7일 이내, 감성점수 <= -0.4)
+        // Track 4: 지난 일주일간 악재 뉴스 (최근 7일 이내, 감성점수 <= -0.4, 최대 200개 수집)
         String track4Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
                 "WHERE n.createdAt >= datetime() - duration('P7D') AND n.sentimentScore <= -0.4 " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
+                "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
-                "LIMIT 100";
-        List<Map<String, Object>> track4Data = new java.util.ArrayList<>(neo4jClient.query(track4Query).fetch().all());
+                "LIMIT 200";
 
-        if (track1Data.isEmpty() && track2Data.isEmpty() && track3Data.isEmpty() && track4Data.isEmpty()) {
-            log.warn("[Weekly LLM Briefing] 모든 트랙의 그래프 컨텍스트 데이터가 비어 있습니다.");
-            return saveAndReturnBriefing("{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}", REDIS_KEY_WEEKLY_BRIEFING);
-        }
-
-        // 2. 각 트랙 데이터를 LLM 포맷으로 변환 (중복 제거 및 크기 제어)
-        StringBuilder contextBuilder = new StringBuilder();
-        appendTrackContext(contextBuilder, "트랙 1: 어제와 오늘의 호재 뉴스 (감성점수 >= 0.5 기반 단기 모멘텀 분석)", track1Data);
-        appendTrackContext(contextBuilder, "트랙 2: 지난 일주일간의 호재 뉴스 (감성점수 >= 0.4 기반 중장기/공급망 분석)", track2Data);
-        appendTrackContext(contextBuilder, "트랙 3: 어제와 오늘의 악재 뉴스 (감성점수 <= -0.5 기반 단기 투자 위험 분석)", track3Data);
-        appendTrackContext(contextBuilder, "트랙 4: 지난 일주일간의 악재 뉴스 (감성점수 <= -0.4 기반 장기 리스크/공급망 전이 분석)", track4Data);
-
-        // 3. 프롬프트 작성
-        String currentDateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy년 M월 d일"));
-        String prompt = String.format(
-            "[System: You are an expert financial analyst. Analyze the provided Neo4j news and tag relations context categorized by tracks and return ONLY a valid JSON object matching the requested schema. No conversational text. Today's date is %s. " +
-            "CRITICAL REQUIREMENT: For each recommended stock, you must analyze and explicitly predict the specific market and stock ramifications/impact (미칠 파장, e.g., short/long-term stock price movement, supply chain consequences, competitive advantages/disadvantages) of the underlying news, and detail these details inside the 'reason' field of each JSON item. " +
-            "CRITICAL WARNING: You are highly encouraged to recommend any publicly traded companies mentioned anywhere in the context (such as in news titles, summaries, tags, or relationships, e.g., 'Apple', 'Tesla', 'TSMC', 'Microsoft', 'AMD', 'ASML', 'Google', etc.). If a company's ticker is not explicitly provided in the context, you must infer the correct ticker symbol (e.g., AAPL for Apple, TSLA for Tesla, MSFT for Microsoft) and format it as '주식이름(주식코드)' in the 'stock' field. Do NOT recommend companies that are not mentioned in the context at all.]\n\n" +
-            "=== [Neo4j 트랙별 뉴스 및 태그/주식 연결 정보 컨텍스트] ===\n" +
-            "%s\n\n" +
-            "위 연결 데이터를 각 트랙별 조건에 따라 심도 있게 분석하여, 다음 4가지 투자 관점의 트랙에 맞는 종목들을 분류 및 선정하고, 각 종목의 선정 이유에는 **특정 뉴스가 해당 주가 및 시장에 미칠 파장(단기/장기 주가 영향, 공급망 영향, 경쟁 구도 변화 등)을 구체적으로 예측하여** 명시한 JSON 형식으로 응답해줘. 만약 조건에 해당하는 종목이 없다면 빈 리스트를 응답해줘.\n" +
-            "반드시 다음 JSON 스키마 구조를 엄격하게 지켜서 응답해야 하며, 그 외의 다른 설명은 절대로 덧붙이지 마십시오:\n\n" +
-            "{\n" +
-            "  \"track1\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"어제와 오늘의 호재 뉴스 내용 및 태그 연결성을 서술하고, 이 뉴스가 단기적으로 주가에 미칠 파장(상승 모멘텀, 단기 수급 등)을 예측하여 상세히 서술\"\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"track2\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"지난 일주일간의 호재 뉴스 및 공급망/산업 관계를 서술하고, 이로 인해 중장기적으로 주가 및 산업 생태계에 미칠 파장(공급망 계약 효과, 시장 점유율 변화 등)을 예측하여 상세히 서술\"\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"track3\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"어제와 오늘의 악재 뉴스 및 위험 요소를 서술하고, 이 뉴스가 단기적으로 주가에 미칠 파장(급락 위험, 신용 리스크 등)을 예측하여 상세히 서술\"\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"track4\": [\n" +
-            "    {\n" +
-            "      \"stock\": \"주식이름(주식코드)\",\n" +
-            "      \"reason\": \"지난 일주일간의 악재 뉴스 및 경쟁사 호재로 인한 영향 등을 서술하고, 이 뉴스가 장기적으로 기업 가치 및 공급망 리스크에 미칠 파장(매출 타격, 제휴 해지 가능성 등)을 예측하여 상세히 서술\"\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}",
-            currentDateStr,
-            contextBuilder.toString()
+        // 4개 트랙 병렬 비동기 수행 (CompletableFuture)
+        java.util.concurrent.CompletableFuture<List<Map<String, Object>>> future1 = processTrackAsync(
+                1, "트랙 1: 어제와 오늘의 호재 뉴스 (감성점수 >= 0.5 기반 단기 모멘텀 분석)",
+                track1Query,
+                "어제와 오늘의 단기 호재 뉴스 내용 및 태그 연결성을 서술하고, 이 뉴스가 단기적으로 주가 및 시장에 미칠 파장(상승 모멘텀, 단기 수급 등)을 예측하여 상세히 서술"
         );
 
-        log.info("[Weekly LLM Briefing] Gemma 4 기반 브리핑 리포트 생성 요청 송신");
-        String rawBriefing = ollamaCloudService.queryGemma4ForReasoning(prompt);
-        return saveAndReturnBriefing(rawBriefing, REDIS_KEY_WEEKLY_BRIEFING);
+        java.util.concurrent.CompletableFuture<List<Map<String, Object>>> future2 = processTrackAsync(
+                2, "트랙 2: 지난 일주일간의 호재 뉴스 (감성점수 >= 0.4 기반 중장기/공급망 분석)",
+                track2Query,
+                "지난 일주일간의 호재 뉴스 및 글로벌 공급망/산업 관계를 서술하고, 이로 인해 중장기적으로 주가 및 산업 생태계에 미칠 파장(공급망 계약 효과, 시장 점유율 변화 등)을 예측하여 상세히 서술"
+        );
+
+        java.util.concurrent.CompletableFuture<List<Map<String, Object>>> future3 = processTrackAsync(
+                3, "트랙 3: 어제와 오늘의 악재 뉴스 (감성점수 <= -0.5 기반 단기 투자 위험 분석)",
+                track3Query,
+                "어제와 오늘의 단기 악재 뉴스 및 위험 요소를 서술하고, 이 뉴스가 단기적으로 주가에 미칠 파장(급락 위험, 신용 리스크 등)을 예측하여 상세히 서술"
+        );
+
+        java.util.concurrent.CompletableFuture<List<Map<String, Object>>> future4 = processTrackAsync(
+                4, "트랙 4: 지난 일주일간의 악재 뉴스 (감성점수 <= -0.4 기반 장기 리스크/공급망 전이 분석)",
+                track4Query,
+                "지난 일주일간의 글로벌 악재 뉴스 및 경쟁사 호재로 인한 영향 등을 서술하고, 이 뉴스가 장기적으로 기업 가치 및 공급망 리스크에 미칠 파장(매출 타격, 제휴 해지 가능성 등)을 예측하여 상세히 서술"
+        );
+
+        // 4개 트랙 모두 완료될 때까지 비동기 대기
+        java.util.concurrent.CompletableFuture.allOf(future1, future2, future3, future4).join();
+
+        log.info("[Weekly LLM Briefing] 4개 트랙 병렬 추론 모두 완료. 통합 JSON 생성 중");
+
+        Map<String, Object> finalBriefingMap = new java.util.LinkedHashMap<>();
+        try {
+            finalBriefingMap.put("track1", future1.get());
+            finalBriefingMap.put("track2", future2.get());
+            finalBriefingMap.put("track3", future3.get());
+            finalBriefingMap.put("track4", future4.get());
+        } catch (Exception e) {
+            log.error("[Weekly LLM Briefing] 병렬 결과 병합 중 오류 발생", e);
+        }
+
+        String rawJson;
+        try {
+            rawJson = objectMapper.writeValueAsString(finalBriefingMap);
+        } catch (Exception e) {
+            log.error("[Weekly LLM Briefing] 통합 결과 JSON 직렬화 실패", e);
+            rawJson = "{\n  \"track1\": [],\n  \"track2\": [],\n  \"track3\": [],\n  \"track4\": []\n}";
+        }
+
+        return saveAndReturnBriefing(rawJson, REDIS_KEY_WEEKLY_BRIEFING);
+    }
+
+    private java.util.concurrent.CompletableFuture<List<Map<String, Object>>> processTrackAsync(
+            int trackNumber,
+            String trackTitle,
+            String cypherQuery,
+            String reasonInstruction) {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            log.info("[Track {}] Neo4j 지식 그래프 데이터 조회 시작", trackNumber);
+            List<Map<String, Object>> data = new java.util.ArrayList<>(neo4jClient.query(cypherQuery).fetch().all());
+            log.info("[Track {}] Neo4j 수집 데이터 개수: {}개", trackNumber, data.size());
+
+            if (data.isEmpty()) {
+                log.warn("[Track {}] 그래프 데이터가 비어 있습니다.", trackNumber);
+                return java.util.Collections.emptyList();
+            }
+
+            StringBuilder contextBuilder = new StringBuilder();
+            appendTrackContext(contextBuilder, trackTitle, data);
+
+            String currentDateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy년 M월 d일"));
+            String prompt = String.format(
+                "[System: You are an expert financial analyst. Analyze the provided Neo4j news and tag relations context for '%s' covering various countries (e.g., KOREA, USA, JAPAN, CHINA) and categories (TECHNOLOGY, BUSINESS, HEADLINE). Return ONLY a valid JSON object with key 'track%d' containing an array of recommended stocks matching the requested schema. No conversational text. Today's date is %s. " +
+                "CRITICAL REQUIREMENT: For each recommended stock, analyze diverse global perspectives and explicitly predict the specific market and stock ramifications/impact (미칠 파장, e.g., short/long-term stock price movement, supply chain consequences, competitive advantages/disadvantages) of the underlying news, detailing these inside the 'reason' field. " +
+                "CRITICAL WARNING: Recommend any publicly traded companies mentioned in the context (e.g. 'Apple', 'Tesla', 'TSMC', 'Samsung Electronics', 'NVIDIA', 'Alphabet', etc.). If a ticker is not explicitly in the context, infer the correct ticker symbol (e.g. AAPL, TSLA, NVDA, 005930) and format 'stock' as '주식이름(주식코드)'. Do NOT recommend companies not mentioned in the context.]\n\n" +
+                "=== [%s] ===\n" +
+                "%s\n\n" +
+                "위 다양한 국가 및 분야의 뉴스 데이터를 바탕으로 심도 있게 분석하여, 다음 JSON 구조 형식으로 응답해줘:\n\n" +
+                "{\n" +
+                "  \"track%d\": [\n" +
+                "    {\n" +
+                "      \"stock\": \"주식이름(주식코드)\",\n" +
+                "      \"reason\": \"%s\"\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}",
+                trackTitle,
+                trackNumber,
+                currentDateStr,
+                trackTitle,
+                contextBuilder.toString(),
+                trackNumber,
+                reasonInstruction
+            );
+
+            log.info("[Track {}] LLM Gemma 4 독립 추론 송신", trackNumber);
+            String rawResponse = ollamaCloudService.queryGemma4ForReasoning(prompt);
+            return parseTrackItems(rawResponse, "track" + trackNumber);
+        }, TRACK_EXECUTOR);
+    }
+
+    private List<Map<String, Object>> parseTrackItems(String rawResponse, String trackKey) {
+        if (rawResponse == null || rawResponse.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        String cleaned = cleanJsonString(rawResponse);
+        try {
+            if (cleaned.startsWith("[")) {
+                return objectMapper.readValue(cleaned, new tools.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+            } else if (cleaned.startsWith("{")) {
+                Map<String, Object> map = objectMapper.readValue(cleaned, new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                Object trackList = map.get(trackKey);
+                if (trackList instanceof List<?>) {
+                    return (List<Map<String, Object>>) trackList;
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Track Parse Error] {} 응답 JSON 파싱 실패: {}", trackKey, e.getMessage());
+        }
+        return java.util.Collections.emptyList();
     }
 
     private void appendTrackContext(StringBuilder builder, String trackTitle, List<Map<String, Object>> data) {
@@ -257,7 +322,21 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
                 sentimentScore = ((Number) sentimentObj).doubleValue();
             }
 
-            builder.append(String.format("[%d] 뉴스: %s (감성 점수: %s)\n", index++, newsTitle, sentimentScore));
+            String country = (String) newsRow.get("country");
+            String category = (String) newsRow.get("category");
+            String source = (String) newsRow.get("source");
+
+            builder.append(String.format("[%d] 뉴스: %s (감성 점수: %s", index++, newsTitle, sentimentScore));
+            if (country != null && !country.isBlank()) {
+                builder.append(String.format(", 국가: %s", country));
+            }
+            if (category != null && !category.isBlank()) {
+                builder.append(String.format(", 분야: %s", category));
+            }
+            if (source != null && !source.isBlank()) {
+                builder.append(String.format(", 언론사: %s", source));
+            }
+            builder.append(")\n");
             builder.append(String.format("    - 요약: %s\n", newsSummary));
 
             Set<String> tags = newsTags.get(newsTitle);
