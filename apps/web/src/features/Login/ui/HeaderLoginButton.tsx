@@ -104,7 +104,7 @@ export default function HeaderLoginButton() {
 
             {/* 메뉴 항목 1: 내 정보 */}
             <Link
-              to="/mypage"
+              to="/users/mypage"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
             >

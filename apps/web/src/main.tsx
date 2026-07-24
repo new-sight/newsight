@@ -8,6 +8,7 @@ import PredictionPage from "./features/prediction/PredictionPage.tsx";
 import NewsPage from "./features/news/NewsPage.tsx";
 import LoginPage from "./features/Login/LoginPage.tsx";
 import CreateAccount from "./features/Login/SignUpPage.tsx";
+import MyPage from "./features/users/MyPage.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="news/:stockCode" element={<NewsPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="login/create" element={<CreateAccount />} />
+          <Route path="users/mypage" element={<MyPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
