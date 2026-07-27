@@ -2,10 +2,18 @@ import { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import useGetStockNews from "../hooks/GetStockNews";
 import NewsItem from "./stockInfo/components/NewsItem";
+import { toggleLike, toggleScrap } from "../../dashboard/api/news";
 
 export default function StockRelatedNews() {
   const { stockCode } = useParams<{ stockCode: string }>();
-  const { newsList, loading, error } = useGetStockNews(stockCode);
+  const {
+    newsList,
+    loading,
+    error,
+    applyLikeResult,
+    applyScrapResult,
+    adjustCommentCount,
+  } = useGetStockNews(stockCode);
   const [currentPage, setCurrentPage] = useState(1);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -14,6 +22,24 @@ export default function StockRelatedNews() {
     setPrevStockCode(stockCode);
     setCurrentPage(1);
   }
+
+  const handleLikeClick = async (newsId: string) => {
+    try {
+      const res = await toggleLike(newsId);
+      applyLikeResult(newsId, res.liked);
+    } catch {
+      alert("좋아요 처리에 실패했습니다. 로그인이 필요합니다.");
+    }
+  };
+
+  const handleScrapClick = async (newsId: string) => {
+    try {
+      const res = await toggleScrap(newsId);
+      applyScrapResult(newsId, res.scrapped);
+    } catch {
+      alert("스크랩 처리에 실패했습니다. 로그인이 필요합니다.");
+    }
+  };
 
   if (loading) {
     return (
@@ -71,7 +97,13 @@ export default function StockRelatedNews() {
       {/* News List */}
       <div className="flex flex-col gap-4">
         {displayedNews.map((news) => (
-          <NewsItem key={news.id} news={news} />
+          <NewsItem
+            key={news.id}
+            news={news}
+            onLikeClick={handleLikeClick}
+            onScrapClick={handleScrapClick}
+            onCommentCountChange={adjustCommentCount}
+          />
         ))}
       </div>
 
