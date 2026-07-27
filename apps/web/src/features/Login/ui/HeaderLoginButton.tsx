@@ -1,24 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-export default function HeaderLoginButton() {
-  const [userState, setUserState] = useState<{
-    username: string | null;
-    loginId: string | null;
-  }>(() => {
-    const token = localStorage.getItem("accessToken");
-    const storedUsername = localStorage.getItem("username");
-    const storedLoginId = localStorage.getItem("loginId");
-    if (token) {
-      return {
-        username: storedUsername || storedLoginId || "사용자",
-        loginId: storedLoginId,
-      };
-    }
-    return { username: null, loginId: null };
-  });
+function subscribe(callback: () => void) {
+  window.addEventListener("authChange", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("authChange", callback);
+    window.removeEventListener("storage", callback);
+  };
+}
 
-  const { username, loginId } = userState;
+function getSnapshot() {
+  const token = localStorage.getItem("accessToken");
+  const storedUsername = localStorage.getItem("username");
+  const storedLoginId = localStorage.getItem("loginId");
+  if (!token) return "";
+  return `${storedUsername || storedLoginId || "사용자"}:${storedLoginId || ""}`;
+}
+
+function getServerSnapshot() {
+  return "";
+}
+
+export default function HeaderLoginButton() {
+  const authSnapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [username, loginId] = authSnapshot ? authSnapshot.split(":") : [null, null];
+
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -44,7 +51,7 @@ export default function HeaderLoginButton() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("loginId");
     localStorage.removeItem("username");
-    setUserState({ username: null, loginId: null });
+    window.dispatchEvent(new Event("authChange"));
     setIsOpen(false);
     alert("로그아웃 되었습니다.");
     navigate("/login");
