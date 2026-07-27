@@ -40,7 +40,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/news/*/comments", "/api/news/*/like", "/api/news/*/scrap").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/news/*/comments/*").authenticated()
-                .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/v1/stocks/**", "/api/v1/news/**", "/api/news/**").permitAll()
+                .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/v1/stocks/**", "/api/v1/news/**", "/api/stock/**", "/api/news/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
