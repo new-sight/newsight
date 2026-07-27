@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
+import { toggleLike } from "../api/news";
 import Dropdown from "./Dropdown";
 import Globe from "./Globe";
+import CommentSection from "./CommentSection";
 import {
   CATEGORY_LABELS,
   CATEGORY_OPTIONS,
@@ -33,11 +35,40 @@ export default function DashboardPage() {
   const rotBarRef = useRef<HTMLDivElement>(null);
   const [rotationDeg, setRotationDeg] = useState(0);
 
-  const { news, totalCount } = useNewsList(countryFilter, categoryFilter, page);
+  const { news, totalCount, applyLikeResult, adjustCommentCount } =
+    useNewsList(countryFilter, categoryFilter, page);
   const countryStats = useCountryNewsStats(categoryFilter);
+  const [expandedNewsIds, setExpandedNewsIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const toggleExpanded = (newsId: string) => {
+    setExpandedNewsIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(newsId)) {
+        next.delete(newsId);
+      } else {
+        next.add(newsId);
+      }
+      return next;
+    });
+  };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / NEWS_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
+
+  const handleLikeClick = async (newsId: string) => {
+    if (!localStorage.getItem("accessToken")) {
+      alert("좋아요를 누르려면 로그인이 필요합니다.");
+      return;
+    }
+    try {
+      const result = await toggleLike(newsId);
+      applyLikeResult(newsId, result.liked, result.likeCount);
+    } catch {
+      alert("좋아요 처리에 실패했습니다.");
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
@@ -117,12 +148,18 @@ export default function DashboardPage() {
             </div>
           )}
           {news.map((n) => (
-            <a
+            <div
               key={n.newsId}
-              href={n.link}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-[3px] border border-white/6 border-l-[3px] bg-bg py-2.5 pr-3 pl-3.5"
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleExpanded(n.newsId)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpanded(n.newsId);
+                }
+              }}
+              className="cursor-pointer rounded-[3px] border border-white/6 border-l-[3px] bg-bg py-2.5 pr-3 pl-3.5"
               style={{ borderLeftColor: CAT_COLOR_VAR[n.category] }}
             >
               <div className="mb-1.5 flex justify-between gap-2 text-xs text-text-muted">
@@ -154,7 +191,53 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-            </a>
+
+              <div className="mt-2 flex items-center gap-3 border-t border-white/8 pt-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLikeClick(n.newsId);
+                  }}
+                  className={`flex items-center gap-1 text-xs ${n.likedByMe ? "text-pink-400" : "text-text-muted"}`}
+                >
+                  <span
+                    className="material-symbols-outlined leading-none"
+                    style={{
+                      fontSize: "16px",
+                      fontVariationSettings: n.likedByMe ? "'FILL' 1" : undefined,
+                    }}
+                  >
+                    favorite
+                  </span>
+                  {n.likeCount}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpanded(n.newsId);
+                  }}
+                  className="flex items-center gap-1 text-xs text-text-muted"
+                >
+                  <span
+                    className="material-symbols-outlined leading-none"
+                    style={{ fontSize: "16px" }}
+                  >
+                    chat_bubble
+                  </span>
+                  {n.commentCount}
+                </button>
+              </div>
+
+              {expandedNewsIds.has(n.newsId) && (
+                <CommentSection
+                  newsId={n.newsId}
+                  onCommentAdded={() => adjustCommentCount(n.newsId, 1)}
+                  onCommentDeleted={() => adjustCommentCount(n.newsId, -1)}
+                />
+              )}
+            </div>
           ))}
         </div>
 

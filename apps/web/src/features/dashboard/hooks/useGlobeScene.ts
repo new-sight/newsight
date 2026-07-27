@@ -24,6 +24,7 @@ export type Bubble = {
   id: string;
   name: string;
   headline: string;
+  headlineLink: string;
   x: number;
   y: number;
   flip: boolean;
@@ -236,6 +237,7 @@ export function useGlobeScene({
             id: stat.country,
             name: COUNTRY_LABELS[stat.country],
             headline: stat.headline,
+            headlineLink: stat.headlineLink,
             x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
             y: (1 - (proj.y * 0.5 + 0.5)) * ch,
             flip: false,
@@ -255,6 +257,7 @@ export function useGlobeScene({
             id: item.newsId,
             name: item.source,
             headline: item.title,
+            headlineLink: item.link,
             x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
             y: (1 - (proj.y * 0.5 + 0.5)) * ch,
             flip: false,

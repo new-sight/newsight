@@ -15,9 +15,12 @@ public record NewsItemResponse(
         Category category,
         LocalDateTime publishedAt,
         String link,
-        List<String> tags
+        List<String> tags,
+        long likeCount,
+        long commentCount,
+        boolean likedByMe
 ) {
-    public static NewsItemResponse from(NewsArticle article) {
+    public static NewsItemResponse from(NewsArticle article, long likeCount, long commentCount, boolean likedByMe) {
         return new NewsItemResponse(
                 article.getId(),
                 article.getTitle(),
@@ -26,7 +29,10 @@ public record NewsItemResponse(
                 article.getCategory(),
                 article.getPublishedAt(),
                 article.getLink(),
-                splitTags(article.getTags())
+                splitTags(article.getTags()),
+                likeCount,
+                commentCount,
+                likedByMe
         );
     }
 

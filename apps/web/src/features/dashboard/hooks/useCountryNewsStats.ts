@@ -7,6 +7,7 @@ export type CountryStat = {
   total: number;
   dominant: NewsCategory;
   headline: string;
+  headlineLink: string;
 };
 
 // Enough recent articles per country to estimate a dominant category when no
@@ -42,6 +43,7 @@ export function useCountryNewsStats(categoryFilter: NewsCategory | "all") {
             total: res.totalCount,
             dominant: dominant as NewsCategory,
             headline: res.news[0].title,
+            headlineLink: res.news[0].link,
           },
         ];
       });
