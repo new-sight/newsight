@@ -146,6 +146,21 @@ export default function NewsSection({
                 </span>
                 {n.commentCount}
               </button>
+              <a
+                href={n.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="ml-auto flex items-center gap-1 text-xs text-text-muted hover:text-text"
+              >
+                <span
+                  className="material-symbols-outlined leading-none"
+                  style={{ fontSize: "16px" }}
+                >
+                  open_in_new
+                </span>
+                바로가기
+              </a>
               <button
                 type="button"
                 onClick={(e) => {
@@ -153,7 +168,7 @@ export default function NewsSection({
                   onScrapClick(n.newsId);
                 }}
                 aria-label={n.scrappedByMe ? "스크랩 해제" : "스크랩"}
-                className={`ml-auto flex items-center ${n.scrappedByMe ? "text-yellow-400" : "text-text-muted"}`}
+                className={`flex items-center ${n.scrappedByMe ? "text-yellow-400" : "text-text-muted"}`}
               >
                 <span
                   className="material-symbols-rounded leading-none"
