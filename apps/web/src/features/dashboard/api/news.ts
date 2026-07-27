@@ -39,13 +39,22 @@ export type ScrapToggleResult = {
   scrapped: boolean;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("accessToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+
+  return token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : {};
 }
 
+
+// 뉴스 목록 조회
 export async function fetchNewsList(params: {
   country?: Country;
   category?: NewsCategory;
@@ -53,77 +62,150 @@ export async function fetchNewsList(params: {
   size?: number;
 }): Promise<NewsListResponse> {
   const query = new URLSearchParams();
-  if (params.country) query.set("country", params.country);
-  if (params.category) query.set("category", params.category);
+
+  if (params.country) {
+    query.set("country", params.country);
+  }
+
+  if (params.category) {
+    query.set("category", params.category);
+  }
+
   query.set("page", String(params.page ?? 0));
   query.set("size", String(params.size ?? 20));
 
+
   const response = await fetch(
     `${API_BASE_URL}/api/news/list?${query.toString()}`,
-    { headers: authHeaders() },
+    {
+      headers: authHeaders(),
+    },
   );
+
+
   if (!response.ok) {
     throw new Error("뉴스 리스트를 불러오지 못했습니다.");
   }
+
+
   return response.json();
 }
 
-export async function fetchComments(newsId: string): Promise<NewsComment[]> {
-  const response = await fetch(`${API_BASE_URL}/api/news/${newsId}/comments`, {
-    headers: authHeaders(),
-  });
+
+// 댓글 조회
+export async function fetchComments(
+  newsId: string,
+): Promise<NewsComment[]> {
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/news/${newsId}/comments`,
+    {
+      headers: authHeaders(),
+    },
+  );
+
+
   if (!response.ok) {
     throw new Error("댓글을 불러오지 못했습니다.");
   }
+
+
   return response.json();
 }
 
-export async function deleteComment(
-  newsId: string,
-  commentId: number,
-): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/news/${newsId}/comments/${commentId}`,
-    { method: "DELETE", headers: authHeaders() },
-  );
-  if (!response.ok) {
-    throw new Error("댓글을 삭제하지 못했습니다.");
-  }
-}
 
+// 댓글 작성
 export async function postComment(
   newsId: string,
   content: string,
 ): Promise<NewsComment> {
-  const response = await fetch(`${API_BASE_URL}/api/news/${newsId}/comments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ content }),
-  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/news/${newsId}/comments`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content,
+      }),
+    },
+  );
+
+
   if (!response.ok) {
-    throw new Error("댓글을 등록하지 못했습니다.");
+    throw new Error("댓글 작성에 실패했습니다.");
   }
+
+
   return response.json();
 }
 
-export async function toggleLike(newsId: string): Promise<LikeToggleResult> {
-  const response = await fetch(`${API_BASE_URL}/api/news/${newsId}/like`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+
+// 댓글 삭제
+export async function deleteComment(
+  newsId: string,
+  commentId: number,
+): Promise<void> {
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/news/${newsId}/comments/${commentId}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+
+
+  if (!response.ok) {
+    throw new Error("댓글 삭제에 실패했습니다.");
+  }
+}
+
+
+// 좋아요 토글
+export async function toggleLike(
+  newsId: string,
+): Promise<LikeToggleResult> {
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/news/${newsId}/like`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+    },
+  );
+
+
   if (!response.ok) {
     throw new Error("좋아요 처리에 실패했습니다.");
   }
+
+
   return response.json();
 }
 
-export async function toggleScrap(newsId: string): Promise<ScrapToggleResult> {
-  const response = await fetch(`${API_BASE_URL}/api/news/${newsId}/scrap`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+
+// 스크랩 토글
+export async function toggleScrap(
+  newsId: string,
+): Promise<ScrapToggleResult> {
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/scraps/news/${newsId}`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+    },
+  );
+
+
   if (!response.ok) {
     throw new Error("스크랩 처리에 실패했습니다.");
   }
+
+
   return response.json();
 }

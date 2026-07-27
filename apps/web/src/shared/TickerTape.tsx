@@ -16,14 +16,22 @@ const WATCHLIST: Watchlist[] = [
   { name: "LG에너지솔루션", ticker: "373220" },
 ];
 
-type TickerQuote = Watchlist & { changePercent: number | null };
+type TickerQuote = Watchlist & {
+  price: number | null;
+  changePercent: number | null;
+};
 
 const REFRESH_INTERVAL_MS = 30_000;
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const REQUEST_TIMEOUT_MS = 5_000;
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 function useTickerQuotes(watchlist: Watchlist[]) {
   const [quotes, setQuotes] = useState<TickerQuote[]>(
-    watchlist.map((w) => ({ ...w, changePercent: null })),
+    watchlist.map((w) => ({
+      ...w,
+      price: null,
+      changePercent: null,
+    })),
   );
 
   useEffect(() => {
@@ -34,28 +42,55 @@ function useTickerQuotes(watchlist: Watchlist[]) {
         watchlist.map(async (w) => {
           try {
             const res = await axios.get<{
+              price?: number;
+              changePercent?: number;
               regularMarketChangePercent?: number;
               error?: string;
-            }>(`${API_BASE_URL}/api/stock/info/${w.ticker}`);
+            }>(`${API_BASE_URL}/api/stock/info/${w.ticker}`, {
+              timeout: REQUEST_TIMEOUT_MS,
+            });
+
+            const price = res.data.error
+              ? null
+              : (res.data.price ?? null);
+
             const changePercent = res.data.error
               ? null
-              : (res.data.regularMarketChangePercent ?? null);
-            return { ...w, changePercent };
+              : (
+                  res.data.changePercent ??
+                  res.data.regularMarketChangePercent ??
+                  null
+                );
+
+            return {
+              ...w,
+              price,
+              changePercent,
+            };
           } catch {
-            return { ...w, changePercent: null };
+            return {
+              ...w,
+              price: null,
+              changePercent: null,
+            };
           }
         }),
       ).then((next) => {
-        if (!cancelled) setQuotes(next);
+        if (!cancelled) {
+          setQuotes(next);
+        }
       });
     };
 
     fetchQuotes();
+
     const id = setInterval(fetchQuotes, REFRESH_INTERVAL_MS);
+
     return () => {
       cancelled = true;
       clearInterval(id);
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,8 +109,22 @@ export default function TickerTape() {
             key={i}
             className="inline-flex items-center gap-2 whitespace-nowrap border-r border-border px-5 font-mono text-[13px]"
           >
-            <b className="font-semibold text-text">{item.name}</b>
-            <span className="text-text-muted">{item.ticker}</span>
+            <b className="font-semibold text-text">
+              {item.name}
+            </b>
+
+            <span className="text-text-muted">
+              {item.ticker}
+            </span>
+
+            <span className="font-semibold text-text">
+              {item.price === null
+                ? "–"
+                : item.price.toLocaleString("ko-KR", {
+                    maximumFractionDigits: 2,
+                  })}
+            </span>
+
             <span
               className={
                 "font-semibold " +

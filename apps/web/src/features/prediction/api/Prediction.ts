@@ -12,7 +12,7 @@ export interface PredictionResponse {
 }
 
 export async function getPrediction(): Promise<PredictionResponse> {
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const baseUrl = import.meta.env.VITE_API_URL || "";
   const response = await fetch(`${baseUrl}/api/news/briefing`);
 
   if (!response.ok) {
