@@ -1,6 +1,5 @@
 package com.example.newsmap.service;
 
-import com.example.auth.domain.User;
 import com.example.auth.repository.UserRepository;
 import com.example.newsmap.domain.Category;
 import com.example.newsmap.domain.Country;
@@ -14,6 +13,7 @@ import com.example.newsmap.response.NewsItemResponse;
 import com.example.newsmap.response.NewsListResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,11 @@ public class NewsService {
 
     public NewsListResponse getNewsList(Country country, Category category, int page, int size, String loginId) {
         Page<NewsArticle> result = newsArticleRepository.findByFilters(country, category, PageRequest.of(page, size));
-        List<String> newsIds = result.getContent().stream().map(NewsArticle::getId).toList();
+        List<String> newsIds = result.getContent().stream()
+                .filter(Objects::nonNull)
+                .map(article -> article.getId())
+                .filter(Objects::nonNull)
+                .toList();
 
         if (newsIds.isEmpty()) {
             return new NewsListResponse(List.of(), page, size, result.getTotalElements());
@@ -64,10 +68,10 @@ public class NewsService {
         if (loginId == null) {
             return null;
         }
-        return userRepository.findByLoginId(loginId).map(User::getId).orElse(null);
+        return userRepository.findByLoginId(loginId).map(user -> user.getId()).orElse(null);
     }
 
     private Map<String, Long> toCountMap(List<NewsIdCount> counts) {
-        return counts.stream().collect(Collectors.toMap(NewsIdCount::getNewsId, NewsIdCount::getCnt));
+        return counts.stream().collect(Collectors.toMap(c -> c.getNewsId(), c -> c.getCnt()));
     }
 }
