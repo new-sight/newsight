@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/scraps")
@@ -18,25 +19,32 @@ public class ScrapController {
     private final ScrapService scrapService;
     private final UserRepository userRepository;
 
+
+    // 스크랩 추가
     @PostMapping("/news/{newsId}")
-    public void addScrap(
+    public Map<String, Boolean> addScrap(
             Authentication authentication,
             @PathVariable String newsId
     ) {
-
-        System.out.println("===== ScrapController 진입 =====");
-        System.out.println(authentication);
 
         String loginId = authentication.getName();
 
         User user = userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
 
         scrapService.addScrap(user.getId(), newsId);
+
+
+        return Map.of(
+                "scrapped", true
+        );
     }
 
+
+    // 스크랩 삭제
     @DeleteMapping("/news/{newsId}")
-    public void deleteScrap(
+    public Map<String, Boolean> deleteScrap(
             Authentication authentication,
             @PathVariable String newsId
     ) {
@@ -46,9 +54,17 @@ public class ScrapController {
         User user = userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+
         scrapService.deleteScrap(user.getId(), newsId);
+
+
+        return Map.of(
+                "scrapped", false
+        );
     }
 
+
+    // 내 스크랩 목록 조회
     @GetMapping("/news")
     public List<ScrapNewsResponse> getMyScraps(
             Authentication authentication
@@ -58,6 +74,7 @@ public class ScrapController {
 
         User user = userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
 
         return scrapService.getMyScraps(user.getId());
     }

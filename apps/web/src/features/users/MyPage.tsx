@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { fetchMyInfo, type MyInfoItem } from "./api/MyInfo";
 import MyPageBox from "./ui/mypage/MyPageBox";
 import FavoriteStock from "../favoriteStock/FavoriteStock";
+import { FavoriteNewsPage } from "../favoriteNews/pages/FavoriteNewsPage";
 
 export default function MyPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -151,60 +152,47 @@ export default function MyPage() {
       </aside>
 
       {/* 우측 메인 컨텐츠 영역 */}
-      <main className="flex-1 bg-bg-panel px-12 lg:px-24 pt-10 overflow-y-auto">
-        <div className="max-w-4xl space-y-8">
-          {activeTab === "favoriteStock" ? (
-            <FavoriteStock />
-          ) : activeTab === "favoriteNews" ? (
-            <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-sky-400">
-                  newspaper
-                </span>
-                관심 뉴스
-              </h1>
-              <p className="text-sm text-text-muted">
-                스크랩한 뉴스 기사 목록입니다.
-              </p>
-              <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-white/50">
-                스크랩된 관심 뉴스가 없습니다.
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* 헤더 제목 */}
-              <div>
-                <h1 className="text-2xl font-bold text-white">내 정보</h1>
-                <p className="text-sm text-text-muted mt-1">
-                  회원 기본 정보 및 상태를 확인할 수 있습니다.
-                </p>
-              </div>
-
-              {/* 회원 프로필 요약 카드 */}
-              <div className="w-full rounded-[10px] border border-white/2 bg-white/2 p-6 sm:p-8 flex flex-col gap-3 backdrop-blur-sm shadow-xl">
-                <MyPageBox
-                  label="아이디"
-                  value={myInfo?.loginId || storedLoginId || "-"}
-                />
-                <MyPageBox
-                  label="이름"
-                  value={myInfo?.username || storedUsername || "-"}
-                />
-                <MyPageBox label="이메일" value={myInfo?.email || "-"} />
-                <MyPageBox label="전화번호" value={myInfo?.phone || "-"} />
-                <MyPageBox
-                  label="가입일"
-                  value={formatCreatedAt(myInfo?.createdAt)}
-                />
-                <MyPageBox
-                  label="유저구분"
-                  value={myInfo?.role === "ROLE_ADMIN" ? "관리자" : "일반회원"}
-                />
-              </div>
-            </>
-          )}
+     <main className="flex-1 bg-bg-panel px-12 lg:px-24 pt-10 overflow-y-auto">
+  <div className="max-w-4xl space-y-8">
+    {activeTab === "favoriteStock" ? (
+      <FavoriteStock />
+    ) : activeTab === "favoriteNews" ? (
+      <FavoriteNewsPage />
+    ) : (
+      <>
+        {/* 헤더 제목 */}
+        <div>
+          <h1 className="text-2xl font-bold text-white">내 정보</h1>
+          <p className="text-sm text-text-muted mt-1">
+            회원 기본 정보 및 상태를 확인할 수 있습니다.
+          </p>
         </div>
-      </main>
+
+        {/* 회원 프로필 요약 카드 */}
+        <div className="w-full rounded-[10px] border border-white/2 bg-white/2 p-6 sm:p-8 flex flex-col gap-3 backdrop-blur-sm shadow-xl">
+          <MyPageBox
+            label="아이디"
+            value={myInfo?.loginId || storedLoginId || "-"}
+          />
+          <MyPageBox
+            label="이름"
+            value={myInfo?.username || storedUsername || "-"}
+          />
+          <MyPageBox label="이메일" value={myInfo?.email || "-"} />
+          <MyPageBox label="전화번호" value={myInfo?.phone || "-"} />
+          <MyPageBox
+            label="가입일"
+            value={formatCreatedAt(myInfo?.createdAt)}
+          />
+          <MyPageBox
+            label="유저구분"
+            value={myInfo?.role === "ROLE_ADMIN" ? "관리자" : "일반회원"}
+          />
+        </div>
+      </>
+    )}
+  </div>
+    </main>
     </div>
   );
 }
