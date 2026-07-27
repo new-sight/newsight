@@ -25,5 +25,31 @@ export function useNewsList(country: Country | "all", category: NewsCategory | "
     };
   }, [country, category, page]);
 
-  return { news, totalCount };
+  const applyLikeResult = (newsId: string, liked: boolean, likeCount: number) => {
+    setNews((prev) =>
+      prev.map((item) =>
+        item.newsId === newsId ? { ...item, likedByMe: liked, likeCount } : item,
+      ),
+    );
+  };
+
+  const adjustCommentCount = (newsId: string, delta: number) => {
+    setNews((prev) =>
+      prev.map((item) =>
+        item.newsId === newsId
+          ? { ...item, commentCount: item.commentCount + delta }
+          : item,
+      ),
+    );
+  };
+
+  const applyScrapResult = (newsId: string, scrapped: boolean) => {
+    setNews((prev) =>
+      prev.map((item) =>
+        item.newsId === newsId ? { ...item, scrappedByMe: scrapped } : item,
+      ),
+    );
+  };
+
+  return { news, totalCount, applyLikeResult, adjustCommentCount, applyScrapResult };
 }
