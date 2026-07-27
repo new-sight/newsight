@@ -18,9 +18,16 @@ public record NewsItemResponse(
         List<String> tags,
         long likeCount,
         long commentCount,
-        boolean likedByMe
+        boolean likedByMe,
+        boolean scrappedByMe
 ) {
-    public static NewsItemResponse from(NewsArticle article, long likeCount, long commentCount, boolean likedByMe) {
+    public static NewsItemResponse from(
+            NewsArticle article,
+            long likeCount,
+            long commentCount,
+            boolean likedByMe,
+            boolean scrappedByMe
+    ) {
         return new NewsItemResponse(
                 article.getId(),
                 article.getTitle(),
@@ -32,7 +39,8 @@ public record NewsItemResponse(
                 splitTags(article.getTags()),
                 likeCount,
                 commentCount,
-                likedByMe
+                likedByMe,
+                scrappedByMe
         );
     }
 

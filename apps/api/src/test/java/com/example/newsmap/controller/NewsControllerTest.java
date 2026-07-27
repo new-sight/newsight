@@ -13,8 +13,10 @@ import com.example.newsmap.response.CommentResponse;
 import com.example.newsmap.response.LikeToggleResponse;
 import com.example.newsmap.response.NewsItemResponse;
 import com.example.newsmap.response.NewsListResponse;
+import com.example.newsmap.response.ScrapToggleResponse;
 import com.example.newsmap.service.CommentService;
 import com.example.newsmap.service.NewsLikeService;
+import com.example.newsmap.service.NewsScrapService;
 import com.example.newsmap.service.NewsService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +51,9 @@ class NewsControllerTest {
     @MockitoBean
     private NewsLikeService newsLikeService;
 
+    @MockitoBean
+    private NewsScrapService newsScrapService;
+
     @Test
     void passesCountryAndCategoryQueryParamsToService() throws Exception {
         when(newsService.getNewsList(Country.JAPAN, Category.BUSINESS, 0, 20, null)).thenReturn(
@@ -56,7 +61,7 @@ class NewsControllerTest {
                         new NewsItemResponse("e38acf8c-03ee-5c32-8bbe-c73f124ca383", "title", "source", Country.JAPAN,
                                 Category.BUSINESS, LocalDateTime.parse("2026-07-21T10:06:00"),
                                 "https://example.com/news/1", List.of("Samsung Electronics", "SK Hynix"),
-                                0, 0, false)
+                                0, 0, false, false)
                 ), 0, 20, 1)
         );
 
@@ -133,5 +138,21 @@ class NewsControllerTest {
         }
 
         verify(commentService).deleteComment(5L, "hong123");
+    }
+
+    @Test
+    void toggleScrapUsesAuthenticatedLoginId() throws Exception {
+        when(newsScrapService.toggleScrap("news-1", "hong123")).thenReturn(new ScrapToggleResponse(true));
+
+        try {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken("hong123", null, List.of()));
+
+            mockMvc.perform(post("/api/news/news-1/scrap")).andExpect(status().isOk());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+
+        verify(newsScrapService).toggleScrap("news-1", "hong123");
     }
 }

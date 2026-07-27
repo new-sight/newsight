@@ -13,7 +13,7 @@ import type { CountryStat } from "./useCountryNewsStats";
 const DIM_COLOR = 0x3a4a52;
 const TILT_X = 0.35;
 const ROTATE_SPEED = 0.008;
-const AUTO_ROTATE_SPEED = 0.0022; // ~1 turn per 90s at 60fps
+const AUTO_ROTATE_SPEED = 0.0022;
 const BUBBLE_WIDTH = 150;
 const BUBBLE_HEIGHT = 76;
 const BUBBLE_GAP = 8;
@@ -34,10 +34,6 @@ type GlobeApi = {
   setScatterNews: (items: NewsListItem[]) => void;
 };
 
-// Deterministic pseudo-random point on the unit sphere, seeded by the article id --
-// stable across re-renders so a given article's dot doesn't jump around, but
-// otherwise unrelated to the article's real-world origin (that's the point: the
-// user wants several headlines spread across the globe, not pinned to geography).
 function scatterPosition(seed: string): { phi: number; theta: number } {
   let h = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -81,7 +77,8 @@ function findBubbleSlot(
     const [top, bottom] = bubbleSpan(candidateY);
     if (top < EDGE_MARGIN || bottom > ch - EDGE_MARGIN) continue;
     const collided = placed.some(
-      (p) => Math.abs(p.x - x) < BUBBLE_WIDTH && top < p.bottom && bottom > p.top,
+      (p) =>
+        Math.abs(p.x - x) < BUBBLE_WIDTH && top < p.bottom && bottom > p.top,
     );
     if (!collided) return { anchorY: candidateY, top, bottom };
   }
@@ -191,7 +188,10 @@ export function useGlobeScene({
     const markerMeshes: Record<
       Country,
       THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>
-    > = {} as Record<Country, THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>;
+    > = {} as Record<
+      Country,
+      THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>
+    >;
     COUNTRY_OPTIONS.forEach((country) => {
       const [lat, lon] = COUNTRY_COORDS[country];
       const phi = ((90 - lat) * Math.PI) / 180;
@@ -215,12 +215,18 @@ export function useGlobeScene({
     // article list changes (see setScatterNews).
     const scatterGroup = new THREE.Group();
     group.add(scatterGroup);
-    let scatterMeshes: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>[] = [];
+    let scatterMeshes: THREE.Mesh<
+      THREE.SphereGeometry,
+      THREE.MeshBasicMaterial
+    >[] = [];
     let currentScatterNews: NewsListItem[] = [];
 
     const renderThree = () => renderer.render(scene, camera);
 
-    const computeBubbles = (activeCountry: Country | "all", activeStats: CountryStat[]) => {
+    const computeBubbles = (
+      activeCountry: Country | "all",
+      activeStats: CountryStat[],
+    ) => {
       const cw = wrap.clientWidth;
       const ch = wrap.clientHeight;
       const next: Bubble[] = [];
@@ -231,14 +237,23 @@ export function useGlobeScene({
           markerMeshes[stat.country].getWorldPosition(worldPos);
           if (worldPos.z < 0.15) return;
           const proj = worldPos.clone().project(camera);
-          if (proj.x < -0.92 || proj.x > 0.92 || proj.y < -0.92 || proj.y > 0.92)
+          if (
+            proj.x < -0.92 ||
+            proj.x > 0.92 ||
+            proj.y < -0.92 ||
+            proj.y > 0.92
+          )
             return;
           next.push({
             id: stat.country,
             name: COUNTRY_LABELS[stat.country],
             headline: stat.headline,
             headlineLink: stat.headlineLink,
-            x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
+            x: clamp(
+              (proj.x * 0.5 + 0.5) * cw,
+              BUBBLE_WIDTH / 2 + EDGE_MARGIN,
+              cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN,
+            ),
             y: (1 - (proj.y * 0.5 + 0.5)) * ch,
             flip: false,
           });
@@ -251,14 +266,23 @@ export function useGlobeScene({
           mesh.getWorldPosition(worldPos);
           if (worldPos.z < 0.15) return;
           const proj = worldPos.clone().project(camera);
-          if (proj.x < -0.92 || proj.x > 0.92 || proj.y < -0.92 || proj.y > 0.92)
+          if (
+            proj.x < -0.92 ||
+            proj.x > 0.92 ||
+            proj.y < -0.92 ||
+            proj.y > 0.92
+          )
             return;
           next.push({
             id: item.newsId,
             name: item.source,
             headline: item.title,
             headlineLink: item.link,
-            x: clamp((proj.x * 0.5 + 0.5) * cw, BUBBLE_WIDTH / 2 + EDGE_MARGIN, cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN),
+            x: clamp(
+              (proj.x * 0.5 + 0.5) * cw,
+              BUBBLE_WIDTH / 2 + EDGE_MARGIN,
+              cw - BUBBLE_WIDTH / 2 - EDGE_MARGIN,
+            ),
             y: (1 - (proj.y * 0.5 + 0.5)) * ch,
             flip: false,
           });
@@ -275,15 +299,21 @@ export function useGlobeScene({
       setBubbles(next);
     };
 
-    const updateHighlight = (activeCountry: Country | "all", activeStats: CountryStat[]) => {
+    const updateHighlight = (
+      activeCountry: Country | "all",
+      activeStats: CountryStat[],
+    ) => {
       const statByCountry = new Map(activeStats.map((s) => [s.country, s]));
       COUNTRY_OPTIONS.forEach((country) => {
         const mesh = markerMeshes[country];
         const stat = statByCountry.get(country);
         mesh.visible = !!stat;
         if (!stat) return;
-        const countryActive = activeCountry === "all" || country === activeCountry;
-        mesh.material.color.set(countryActive ? CAT_COLOR_HEX[stat.dominant] : DIM_COLOR);
+        const countryActive =
+          activeCountry === "all" || country === activeCountry;
+        mesh.material.color.set(
+          countryActive ? CAT_COLOR_HEX[stat.dominant] : DIM_COLOR,
+        );
         mesh.scale.setScalar(countryActive ? 1 : 0.6);
       });
       renderThree();

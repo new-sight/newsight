@@ -35,7 +35,6 @@ export default function CommentSection({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetchComments(newsId).then((res) => {
       if (!cancelled) {
         setComments(res);

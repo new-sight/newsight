@@ -10,8 +10,6 @@ export type CountryStat = {
   headlineLink: string;
 };
 
-// Enough recent articles per country to estimate a dominant category when no
-// category filter is active; each country's totalCount above is still exact.
 const SAMPLE_SIZE = 40;
 
 export function useCountryNewsStats(categoryFilter: NewsCategory | "all") {
@@ -36,7 +34,9 @@ export function useCountryNewsStats(categoryFilter: NewsCategory | "all") {
         res.news.forEach((n) => {
           counts[n.category] = (counts[n.category] ?? 0) + 1;
         });
-        const [dominant] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+        const [dominant] = Object.entries(counts).sort(
+          (a, b) => b[1] - a[1],
+        )[0];
         return [
           {
             country: COUNTRY_OPTIONS[i],

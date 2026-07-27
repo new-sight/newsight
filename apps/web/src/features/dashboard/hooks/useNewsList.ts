@@ -43,5 +43,13 @@ export function useNewsList(country: Country | "all", category: NewsCategory | "
     );
   };
 
-  return { news, totalCount, applyLikeResult, adjustCommentCount };
+  const applyScrapResult = (newsId: string, scrapped: boolean) => {
+    setNews((prev) =>
+      prev.map((item) =>
+        item.newsId === newsId ? { ...item, scrappedByMe: scrapped } : item,
+      ),
+    );
+  };
+
+  return { news, totalCount, applyLikeResult, adjustCommentCount, applyScrapResult };
 }

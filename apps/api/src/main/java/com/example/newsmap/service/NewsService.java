@@ -9,6 +9,7 @@ import com.example.newsmap.repository.CommentRepository;
 import com.example.newsmap.repository.NewsArticleRepository;
 import com.example.newsmap.repository.NewsIdCount;
 import com.example.newsmap.repository.NewsLikeRepository;
+import com.example.newsmap.repository.NewsScrapRepository;
 import com.example.newsmap.response.NewsItemResponse;
 import com.example.newsmap.response.NewsListResponse;
 import java.util.List;
@@ -26,6 +27,7 @@ public class NewsService {
 
     private final NewsArticleRepository newsArticleRepository;
     private final NewsLikeRepository newsLikeRepository;
+    private final NewsScrapRepository newsScrapRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
@@ -39,28 +41,30 @@ public class NewsService {
 
         Map<String, Long> likeCounts = toCountMap(newsLikeRepository.countGroupByNewsIdIn(newsIds));
         Map<String, Long> commentCounts = toCountMap(commentRepository.countGroupByNewsIdIn(newsIds));
-        Set<String> likedNewsIds = resolveLikedNewsIds(loginId, newsIds);
+        Long currentUserId = resolveUserId(loginId);
+        Set<String> likedNewsIds = currentUserId == null
+                ? Set.of() : newsLikeRepository.findLikedNewsIds(currentUserId, newsIds);
+        Set<String> scrappedNewsIds = currentUserId == null
+                ? Set.of() : newsScrapRepository.findScrappedNewsIds(currentUserId, newsIds);
 
         List<NewsItemResponse> news = result.getContent().stream()
                 .map(article -> NewsItemResponse.from(
                         article,
                         likeCounts.getOrDefault(article.getId(), 0L),
                         commentCounts.getOrDefault(article.getId(), 0L),
-                        likedNewsIds.contains(article.getId())
+                        likedNewsIds.contains(article.getId()),
+                        scrappedNewsIds.contains(article.getId())
                 ))
                 .toList();
 
         return new NewsListResponse(news, page, size, result.getTotalElements());
     }
 
-    private Set<String> resolveLikedNewsIds(String loginId, List<String> newsIds) {
+    private Long resolveUserId(String loginId) {
         if (loginId == null) {
-            return Set.of();
+            return null;
         }
-        return userRepository.findByLoginId(loginId)
-                .map(User::getId)
-                .map(userId -> newsLikeRepository.findLikedNewsIds(userId, newsIds))
-                .orElse(Set.of());
+        return userRepository.findByLoginId(loginId).map(User::getId).orElse(null);
     }
 
     private Map<String, Long> toCountMap(List<NewsIdCount> counts) {

@@ -21,8 +21,6 @@ export const COUNTRY_LABELS: Record<Country, string> = {
   CHINA: "중국",
 };
 
-// One representative city coordinate per country -- the API only reports
-// country, not city, so the globe pins one marker per country.
 export const COUNTRY_COORDS: Record<Country, [lat: number, lon: number]> = {
   KOREA: [37.5, 127],
   USA: [40.7, -74],

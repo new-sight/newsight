@@ -5,8 +5,10 @@ import com.example.newsmap.domain.Country;
 import com.example.newsmap.response.CommentResponse;
 import com.example.newsmap.response.LikeToggleResponse;
 import com.example.newsmap.response.NewsListResponse;
+import com.example.newsmap.response.ScrapToggleResponse;
 import com.example.newsmap.service.CommentService;
 import com.example.newsmap.service.NewsLikeService;
+import com.example.newsmap.service.NewsScrapService;
 import com.example.newsmap.service.NewsService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class NewsController {
     private final NewsService newsService;
     private final CommentService commentService;
     private final NewsLikeService newsLikeService;
+    private final NewsScrapService newsScrapService;
 
     @GetMapping("/list")
     public NewsListResponse getNewsList(
@@ -69,6 +72,11 @@ public class NewsController {
     @PostMapping("/{newsId}/like")
     public LikeToggleResponse toggleLike(@PathVariable String newsId) {
         return newsLikeService.toggleLike(newsId, currentLoginId());
+    }
+
+    @PostMapping("/{newsId}/scrap")
+    public ScrapToggleResponse toggleScrap(@PathVariable String newsId) {
+        return newsScrapService.toggleScrap(newsId, currentLoginId());
     }
 
 

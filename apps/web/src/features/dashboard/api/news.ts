@@ -12,6 +12,7 @@ export type NewsListItem = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  scrappedByMe: boolean;
 };
 
 export type NewsListResponse = {
@@ -32,6 +33,10 @@ export type NewsComment = {
 export type LikeToggleResult = {
   liked: boolean;
   likeCount: number;
+};
+
+export type ScrapToggleResult = {
+  scrapped: boolean;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -108,6 +113,17 @@ export async function toggleLike(newsId: string): Promise<LikeToggleResult> {
   });
   if (!response.ok) {
     throw new Error("좋아요 처리에 실패했습니다.");
+  }
+  return response.json();
+}
+
+export async function toggleScrap(newsId: string): Promise<ScrapToggleResult> {
+  const response = await fetch(`${API_BASE_URL}/api/news/${newsId}/scrap`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error("스크랩 처리에 실패했습니다.");
   }
   return response.json();
 }
