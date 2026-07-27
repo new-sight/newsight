@@ -24,8 +24,8 @@ public class MyInfoServiceImpl implements MyInfoService {
 
         Optional<User> userOpt = Optional.empty();
         if (username != null && !username.isBlank() && !"사용자".equals(username)) {
-            userOpt = myInfoRepository.findByUsername(username)
-                    .or(() -> myInfoRepository.findByLoginId(username));
+            userOpt = myInfoRepository.findByLoginId(username)
+                    .or(() -> myInfoRepository.findByUsername(username));
         }
 
         // 만약 지정된 키워드로 못 찾으면, DB의 첫 번째 유저(테스트 및 샌드박스용)로 fallback
@@ -39,10 +39,10 @@ public class MyInfoServiceImpl implements MyInfoService {
             return MyInfoResponse.builder()
                     .loginId("****")
                     .username("사용자")
-                    .email("user@example.com")
-                    .phone("010-1234-5678")
+                    .email("-")
+                    .phone("-")
                     .role("ROLE_USER")
-                    .createdAt("2026-07-24")
+                    .createdAt("-")
                     .build();
         }
 
@@ -50,13 +50,20 @@ public class MyInfoServiceImpl implements MyInfoService {
         log.info("[MyInfoService] Found user -> ID: {}, LoginId: {}, Username: {}, Email: {}, Phone: {}, CreatedAt: {}",
                 user.getId(), user.getLoginId(), user.getUsername(), user.getEmail(), user.getPhone(), user.getCreatedAt());
 
+        String formattedDate = "-";
+        if (user.getCreatedAt() != null) {
+            formattedDate = user.getCreatedAt().toString();
+        }
+
         return MyInfoResponse.builder()
                 .loginId(maskLoginId(user.getLoginId()))
-                .username(user.getUsername())
-                .email(user.getEmail() != null && !user.getEmail().isBlank() ? user.getEmail() : "user@example.com")
-                .phone(user.getPhone() != null && !user.getPhone().isBlank() ? user.getPhone() : "010-1234-5678")
+                .username(user.getUsername() != null ? user.getUsername() : user.getLoginId())
+                .email(user.getEmail() != null && !user.getEmail().isBlank() ? user.getEmail() : "-")
+                .phone(user.getPhone() != null && !user.getPhone().isBlank() ? user.getPhone() : "-")
                 .role(user.getRole() != null ? user.getRole().name() : "ROLE_USER")
-                .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : "2026-07-24")
+                .createdAt(formattedDate)
+                .scrappedNewsIds(user.getScrappedNewsIds() != null ? user.getScrappedNewsIds() : "")
+                .favoriteStockTickers(user.getFavoriteStockTickers() != null ? user.getFavoriteStockTickers() : "")
                 .build();
     }
 

@@ -436,6 +436,61 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
         return mutableEntities;
     }
 
+    @Override
+    public java.util.List<String> getNewsIdsByStockCodes(java.util.List<String> stockCodes) {
+        if (stockCodes == null || stockCodes.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        String cypherQuery = "MATCH (s:Stock) " +
+                "WHERE s.ticker IN $stockCodes OR s.code IN $stockCodes " +
+                "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+                "WHERE t.name = s.name OR t.name = s.kor_name OR t.name = s.ticker " +
+                "   OR EXISTS { " +
+                "       MATCH (t)-[:SYNONYM_OF]-(other:Tag) " +
+                "       WHERE other.name = s.name OR other.name = s.kor_name OR other.name = s.ticker " +
+                "   } " +
+                "RETURN DISTINCT n.id AS newsId";
+
+        java.util.Collection<Map<String, Object>> result = neo4jClient.query(cypherQuery)
+                .bind(stockCodes).to("stockCodes")
+                .fetch()
+                .all();
+
+        java.util.List<String> newsIds = new java.util.ArrayList<>();
+        if (result != null) {
+            for (Map<String, Object> record : result) {
+                String newsId = (String) record.get("newsId");
+                if (newsId != null && !newsIds.contains(newsId)) {
+                    newsIds.add(newsId);
+                }
+            }
+        }
+        return newsIds;
+    }
+
+    @Override
+    public java.util.List<com.example.newsAIAgents.domain.NewsEntity> getNewsDetailsByStockCodes(java.util.List<String> stockCodes) {
+        java.util.List<String> newsIds = getNewsIdsByStockCodes(stockCodes);
+        if (newsIds == null || newsIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        java.util.List<com.example.newsAIAgents.domain.NewsEntity> entities = newsJpaRepository.findAllById(newsIds);
+        java.util.List<com.example.newsAIAgents.domain.NewsEntity> mutableEntities = new java.util.ArrayList<>(entities);
+
+        mutableEntities.sort((a, b) -> {
+            LocalDateTime atA = a.getPublishedAt();
+            LocalDateTime atB = b.getPublishedAt();
+            if (atA == null && atB == null) return 0;
+            if (atA == null) return 1;
+            if (atB == null) return -1;
+            return atB.compareTo(atA);
+        });
+
+        return mutableEntities;
+    }
+
     private String cleanJsonString(String rawJson) {
         if (rawJson == null) {
             return "";

@@ -27,4 +27,14 @@ public interface NewsInferenceService {
      * 특정 주식코드와 관련된 뉴스 목록을 Neo4j에서 ID로 찾은 후, PostgreSQL(JPA)에서 세부 정보를 조회합니다.
      */
     List<NewsEntity> getNewsDetailsByStockCode(String stockCode);
+
+    /**
+     * 주식코드 리스트와 관련된 뉴스 ID 리스트를 Neo4j에서 조회합니다.
+     */
+    List<String> getNewsIdsByStockCodes(List<String> stockCodes);
+
+    /**
+     * 여러 주식코드 리스트와 관련된 뉴스 목록을 Neo4j에서 ID로 찾은 후, PostgreSQL(JPA)에서 세부 정보를 조회합니다.
+     */
+    List<NewsEntity> getNewsDetailsByStockCodes(List<String> stockCodes);
 }

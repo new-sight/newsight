@@ -34,6 +34,12 @@ public class User {
   @Column(length = 20)
   private String phone; // 전화번호
 
+  @Column(name = "scrapped_news_ids", columnDefinition = "TEXT")
+  private String scrappedNewsIds; // 스크랩한 뉴스 ID 목록 (쉼표 구분)
+
+  @Column(name = "favorite_stock_tickers", columnDefinition = "TEXT")
+  private String favoriteStockTickers; // 자주찾는 주식 티커 코드 목록 (쉼표 구분)
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private Role role;

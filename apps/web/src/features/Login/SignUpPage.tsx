@@ -46,7 +46,9 @@ export default function SignUpPage() {
       }
     } catch (err) {
       console.error("회원가입 연동 에러:", err);
-      alert("서버 연결에 실패했습니다. 백엔드(8080) 실행 상태를 확인해 주세요.");
+      alert(
+        "서버 연결에 실패했습니다. 백엔드(8080) 실행 상태를 확인해 주세요.",
+      );
     } finally {
       setLoading(false);
     }
