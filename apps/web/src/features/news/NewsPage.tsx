@@ -72,9 +72,9 @@ export default function NewsPage() {
                 onClick={() => navigate(`/news/${code}`)}
                 className="px-3 py-1.5 bg-bg-panel hover:bg-bg-panel/40 text-text hover:text-white text-xs sm:text-sm rounded-lg border border-border hover:border-accent transition-all cursor-pointer shadow-sm"
               >
-                {code}{" "}
+                {name}{" "}
                 <span className="text-[10px] text-text-muted ml-0.5">
-                  {name}
+                  {code}
                 </span>
               </button>
             ))}

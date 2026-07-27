@@ -7,6 +7,8 @@ export type MyInfoItem = {
   phone: string;
   role: string;
   createdAt: string;
+  scrappedNewsIds?: string;
+  favoriteStockTickers?: string;
 };
 
 // const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
