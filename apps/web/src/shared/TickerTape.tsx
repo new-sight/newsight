@@ -27,7 +27,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 function useTickerQuotes(watchlist: Watchlist[]) {
   const [quotes, setQuotes] = useState<TickerQuote[]>(
-    watchlist.map((w) => ({ ...w, price: null, changePercent: null })),
+    watchlist.map((w) => ({
+      ...w,
+      price: null,
+      changePercent: null,
+    })),
   );
 
   useEffect(() => {
@@ -46,12 +50,17 @@ function useTickerQuotes(watchlist: Watchlist[]) {
               timeout: REQUEST_TIMEOUT_MS,
             });
 
-            const price = res.data.error ? null : (res.data.price ?? null);
+            const price = res.data.error
+              ? null
+              : (res.data.price ?? null);
+
             const changePercent = res.data.error
               ? null
-              : (res.data.changePercent ??
+              : (
+                  res.data.changePercent ??
                   res.data.regularMarketChangePercent ??
-                  null);
+                  null
+                );
 
             return {
               ...w,
@@ -81,6 +90,7 @@ function useTickerQuotes(watchlist: Watchlist[]) {
       cancelled = true;
       clearInterval(id);
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -99,9 +109,13 @@ export default function TickerTape() {
             key={i}
             className="inline-flex items-center gap-2 whitespace-nowrap border-r border-border px-5 font-mono text-[13px]"
           >
-            <b className="font-semibold text-text">{item.name}</b>
+            <b className="font-semibold text-text">
+              {item.name}
+            </b>
 
-            <span className="text-text-muted">{item.ticker}</span>
+            <span className="text-text-muted">
+              {item.ticker}
+            </span>
 
             <span className="font-semibold text-text">
               {item.price === null

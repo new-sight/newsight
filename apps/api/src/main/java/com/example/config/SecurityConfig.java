@@ -2,6 +2,10 @@ package com.example.config;
 
 import com.example.config.jwt.JwtAuthenticationFilter;
 import com.example.config.jwt.JwtTokenProvider;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,38 +39,125 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .formLogin(formLogin -> formLogin.disable())
             .httpBasic(httpBasic -> httpBasic.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> 
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/news/*/comments", "/api/news/*/like", "/api/news/*/scrap").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/api/news/*/comments/*").authenticated()
-                .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/v1/stocks/**", "/api/v1/news/**", "/api/stock/**", "/api/news/**").permitAll()
+
+                
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/news/*/comments",
+                    "/api/news/*/like",
+                    "/api/news/*/scrap"
+                ).authenticated()
+
+             
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/api/news/*/comments/*"
+                ).authenticated()
+
+                // 스크랩 API 인증 필요
+                .requestMatchers(
+                    "/api/scraps/**"
+                ).authenticated()
+
+
+                // 로그인, 회원가입, 조회 API 공개
+                .requestMatchers(
+                    "/api/v1/auth/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/api/v1/stocks/**",
+                    "/api/v1/news/**",
+                    "/api/stock/**",
+                    "/api/news/**"
+                ).permitAll()
+
+
+                // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(
+                new JwtAuthenticationFilter(jwtTokenProvider),
+                UsernamePasswordAuthenticationFilter.class
+            );
 
         return http.build();
     }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
         return config.getAuthenticationManager();
     }
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowedOriginPatterns(List.of("*"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedMethods(
+            List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS",
+                "PATCH"
+            )
+        );
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
+
         return source;
+    }
+
+
+    // Swagger UI Authorize 버튼 + JWT 설정
+    @Bean
+    public OpenAPI openAPI() {
+
+        SecurityScheme securityScheme =
+                new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")
+                        .in(SecurityScheme.In.HEADER)
+                        .name("Authorization");
+
+
+        SecurityRequirement securityRequirement =
+                new SecurityRequirement()
+                        .addList("bearerAuth");
+
+
+        return new OpenAPI()
+                .components(
+                    new Components()
+                        .addSecuritySchemes(
+                            "bearerAuth",
+                            securityScheme
+                        )
+                )
+                .addSecurityItem(securityRequirement);
     }
 }
