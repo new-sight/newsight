@@ -75,10 +75,10 @@ export default function MyPage() {
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className="material-symbols-outlined text-lg text-pink-500 leading-none"
+                    className="material-symbols-rounded text-lg text-yellow-400 leading-none"
                     style={{ fontVariationSettings: "'FILL' 1" }}
                   >
-                    favorite
+                    star
                   </span>
                   <span>좋아요</span>
                 </div>

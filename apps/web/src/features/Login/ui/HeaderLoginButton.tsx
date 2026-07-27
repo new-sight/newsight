@@ -23,8 +23,14 @@ function getServerSnapshot() {
 }
 
 export default function HeaderLoginButton() {
-  const authSnapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const [username, loginId] = authSnapshot ? authSnapshot.split(":") : [null, null];
+  const authSnapshot = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+  const [username, loginId] = authSnapshot
+    ? authSnapshot.split(":")
+    : [null, null];
 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -131,10 +137,10 @@ export default function HeaderLoginButton() {
               className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
             >
               <span
-                className="material-symbols-outlined text-pink-500 leading-none"
+                className="material-symbols-rounded text-yellow-400 leading-none"
                 style={{ fontSize: "18px", fontVariationSettings: "'FILL' 1" }}
               >
-                favorite
+                star
               </span>
               <span className="tracking-tight">좋아요</span>
             </Link>
