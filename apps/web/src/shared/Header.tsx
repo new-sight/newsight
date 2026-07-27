@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "../assets/icons/logo.svg";
 import TickerTape from "./TickerTape";
@@ -10,18 +9,7 @@ const NAV_ITEMS = [
   { to: "/news", label: "관련 뉴스" },
 ];
 
-function useClock() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
-
 export default function Header() {
-  const now = useClock();
-
   return (
     <>
       <header className="relative z-50 flex flex-nowrap items-center justify-between gap-3 border-b border-border bg-bg-panel px-4 py-3 sm:gap-6 sm:px-8">
@@ -50,17 +38,7 @@ export default function Header() {
               </NavLink>
             ))}
           </nav>
-
-          <div className="hidden items-center gap-3 whitespace-nowrap font-mono text-[13px] text-text-muted sm:flex">
-            <HeaderLoginButton />
-            <span className="leading-none">
-              {now.toLocaleTimeString("ko-KR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })}
-            </span>
-          </div>
+          <HeaderLoginButton />
         </div>
       </header>
       <TickerTape />
