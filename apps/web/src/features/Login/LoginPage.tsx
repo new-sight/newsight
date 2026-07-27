@@ -28,6 +28,7 @@ export default function LoginPage() {
         localStorage.setItem("accessToken", data.token);
         localStorage.setItem("loginId", data.loginId);
         localStorage.setItem("username", data.username);
+        window.dispatchEvent(new Event("authChange"));
         alert(`${data.username || data.loginId}님, 환영합니다!`);
         navigate("/");
       } else {

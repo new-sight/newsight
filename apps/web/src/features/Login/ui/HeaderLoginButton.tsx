@@ -1,24 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-export default function HeaderLoginButton() {
-  const [userState, setUserState] = useState<{
-    username: string | null;
-    loginId: string | null;
-  }>(() => {
-    const token = localStorage.getItem("accessToken");
-    const storedUsername = localStorage.getItem("username");
-    const storedLoginId = localStorage.getItem("loginId");
-    if (token) {
-      return {
-        username: storedUsername || storedLoginId || "사용자",
-        loginId: storedLoginId,
-      };
-    }
-    return { username: null, loginId: null };
-  });
+function subscribe(callback: () => void) {
+  window.addEventListener("authChange", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("authChange", callback);
+    window.removeEventListener("storage", callback);
+  };
+}
 
-  const { username, loginId } = userState;
+function getSnapshot() {
+  const token = localStorage.getItem("accessToken");
+  const storedUsername = localStorage.getItem("username");
+  const storedLoginId = localStorage.getItem("loginId");
+  if (!token) return "";
+  return `${storedUsername || storedLoginId || "사용자"}:${storedLoginId || ""}`;
+}
+
+function getServerSnapshot() {
+  return "";
+}
+
+export default function HeaderLoginButton() {
+  const authSnapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [username, loginId] = authSnapshot ? authSnapshot.split(":") : [null, null];
+
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -44,7 +51,7 @@ export default function HeaderLoginButton() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("loginId");
     localStorage.removeItem("username");
-    setUserState({ username: null, loginId: null });
+    window.dispatchEvent(new Event("authChange"));
     setIsOpen(false);
     alert("로그아웃 되었습니다.");
     navigate("/login");
@@ -104,7 +111,7 @@ export default function HeaderLoginButton() {
 
             {/* 메뉴 항목 1: 내 정보 */}
             <Link
-              to="/mypage"
+              to="/users/mypage"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
             >
@@ -114,7 +121,7 @@ export default function HeaderLoginButton() {
               >
                 account_circle
               </span>
-              <span className="tracking-tight">내 정보</span>
+              <span className="tracking-tight">마이페이지</span>
             </Link>
 
             {/* 메뉴 항목 2: 좋아요 */}
