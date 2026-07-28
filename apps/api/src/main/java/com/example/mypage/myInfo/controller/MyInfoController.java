@@ -54,4 +54,15 @@ public class MyInfoController {
         MyInfoResponse response = myInfoService.getMyInfoByUsername(targetUser);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "회원 탈퇴", description = "현재 인증된 사용자의 계정과 관련 데이터(스크랩, 좋아요, 댓글)를 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "탈퇴 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자", content = @Content)
+    })
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteMyAccount(@Parameter(hidden = true) Authentication authentication) {
+        myInfoService.deleteAccount(authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
 }

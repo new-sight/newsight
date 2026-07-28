@@ -58,6 +58,11 @@ export default function FavoriteStockBox({
         className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-accent/10 blur-lg transition-all duration-300 group-hover:bg-accent/20"
       />
 
+<<<<<<< HEAD
+      {/* 1행: 회사명 & 티커 */}
+      <div className="flex items-center gap-1.5 min-w-0 z-10">
+        <h3 className="truncate text-xs font-bold text-white">
+=======
       {/* 우측 상단 컴팩트 관심 종목 별 버튼 */}
       <SmallFavoriteStarButton
         symbol={ticker}
@@ -69,6 +74,7 @@ export default function FavoriteStockBox({
       {/* 1행: 회사명 & 티커 (우측 소형 별 아이콘 영역 pr-5) */}
       <div className="flex items-center gap-1.5 min-w-0 z-10 pr-5">
         <h3 className="truncate text-xs font-bold text-white transition-colors group-hover:text-accent">
+>>>>>>> bed80c090ccf15d7c2dfaa3c9e70fd6aac56e480
           {companyName || ticker}
         </h3>
         <span className="inline-block shrink-0 rounded bg-accent/20 px-1.5 py-0.2 font-mono text-[10px] font-bold text-accent border border-accent/30 shadow-inner">

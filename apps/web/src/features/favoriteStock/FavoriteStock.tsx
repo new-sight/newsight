@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useGetStockInfo from "../news/hooks/GetStockInfo";
+import NewsItem from "../news/ui/stockInfo/components/NewsItem";
 import FavoriteStockBox from "./ui/FavoriteStockBox";
-import SearchBar, { type SupabaseStockItem } from "./ui/SearchBar";
+import { useFavoriteStocksNews } from "./hooks/useFavoriteStocksNews";
 
 interface FavoriteStockItemProps {
   symbol: string;
@@ -101,6 +102,12 @@ export default function FavoriteStock() {
     setStocks((prev) => prev.filter((item) => item.symbol !== ticker));
   };
 
+  const {
+    newsList,
+    loading: newsLoading,
+    error: newsError,
+  } = useFavoriteStocksNews(stocks);
+
   return (
     <div className="space-y-4 sm:-mt-4 -mx-4 lg:-mx-14">
       {/* 헤더 타이틀 및 검색 추가 창 */}
@@ -147,12 +154,43 @@ export default function FavoriteStock() {
           ))}
         </div>
       )}
-      <div className="text-xl font-bold text-white flex items-center gap-2.5 mt-10">
-        <span className="material-symbols-outlined text-emerald-400">
-          newspaper
-        </span>
-        관심 종목 관련 뉴스
-      </div>
+
+      {/* 관심 종목 뉴스 모아보기 */}
+      {stocks.length > 0 && (
+        <div className="space-y-4 mt-8">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-sky-400">
+              newspaper
+            </span>
+            관심 종목 뉴스 모아보기
+          </h2>
+
+          {newsLoading ? (
+            <div className="flex flex-col gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-full h-32 rounded-xl bg-gray-600/5 animate-pulse border border-border/20"
+                />
+              ))}
+            </div>
+          ) : newsError ? (
+            <div className="w-full rounded-xl p-6 bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+              {newsError}
+            </div>
+          ) : newsList.length === 0 ? (
+            <div className="w-full rounded-xl p-8 bg-gray-600/5 border border-border/20 text-text-muted text-center text-base">
+              관심 종목 관련 뉴스가 없습니다.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {newsList.slice(0, 10).map((news) => (
+                <NewsItem key={news.id} news={news} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

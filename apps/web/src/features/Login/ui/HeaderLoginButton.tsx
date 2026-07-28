@@ -130,6 +130,8 @@ export default function HeaderLoginButton() {
               <span className="tracking-tight">마이페이지</span>
             </Link>
 
+<<<<<<< HEAD
+=======
             {/* 메뉴 항목 2: 좋아요 */}
             <Link
               to="/likes?type=stock"
@@ -145,6 +147,7 @@ export default function HeaderLoginButton() {
               <span className="tracking-tight">좋아요</span>
             </Link>
 
+>>>>>>> bed80c090ccf15d7c2dfaa3c9e70fd6aac56e480
             <div className="my-1 border-t border-white/10" />
 
             {/* 메뉴 항목 3: 로그아웃 */}

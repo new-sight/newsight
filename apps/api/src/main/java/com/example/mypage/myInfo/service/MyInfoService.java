@@ -4,4 +4,5 @@ import com.example.mypage.myInfo.dto.MyInfoResponse;
 
 public interface MyInfoService {
     MyInfoResponse getMyInfoByUsername(String username);
+    void deleteAccount(String loginId);
 }
