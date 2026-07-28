@@ -25,7 +25,11 @@
       "Bash(curl -sS -i --max-time 5 -X POST \"http://localhost:8080/api/scraps/news/1\")",
       "Bash(curl -sS -o /dev/null -w \"5173 HTTP:%{http_code}\\\\n\" --max-time 5 http://localhost:5173/)",
       "Bash(curl -sS --max-time 5 \"http://localhost:8080/api/news/list/AAPL\" -o /dev/null -w \"backend AAPL news HTTP:%{http_code}\\\\n\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(echo \"local exit:$?\")",
+      "Bash(git config *)",
+      "Bash(echo \"global exit:$?\")",
+      "Bash(git fetch *)"
     ]
   }
 }

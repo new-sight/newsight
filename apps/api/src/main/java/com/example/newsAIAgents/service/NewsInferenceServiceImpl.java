@@ -23,61 +23,6 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
 
     private static final String REDIS_KEY_WEEKLY_BRIEFING = "weekly_stock_briefing";
 
-    @Override
-    public String inferRecentNewsTrend(String userQuery) {
-        log.info("[Graph RAG] Neo4j 지식 그래프 컨텍스트 조회 시작");
-        
-        // 1. Neo4j 에서 최근 3일간 수집된 뉴스와 연결된 태그 정보 조회
-        String contextQuery = "MATCH (n:News) " +
-                "WHERE n.createdAt >= datetime() - duration('P3D') " +
-                "OPTIONAL MATCH (n)-[:HAS_TAG]->(t:Tag) " +
-                "RETURN n.title AS title, n.summary AS summary, collect(t.name) AS tags " +
-                "LIMIT 15";
-        java.util.Collection<Map<String, Object>> graphContextRaw = neo4jClient.query(contextQuery)
-                .fetch()
-                .all();
-        List<Map<String, Object>> graphContext = new java.util.ArrayList<>(graphContextRaw);
-        
-        if (graphContext == null || graphContext.isEmpty()) {
-            log.warn("[Graph RAG] 최근 수집된 그래프 컨텍스트 데이터가 비어 있습니다.");
-            return "최근 수집된 뉴스 데이터가 Neo4j 데이터베이스에 존재하지 않아 분석을 진행할 수 없습니다. 먼저 뉴스 수집 파이프라인을 실행해 주세요.";
-        }
-
-        // 2. 조회한 그래프 데이터를 LLM에 제공할 텍스트 포맷으로 포매팅
-        StringBuilder contextBuilder = new StringBuilder();
-        contextBuilder.append("=== [Neo4j 최근 뉴스 & 키워드 지식 그래프 컨텍스트] ===\n");
-        
-        for (int i = 0; i < graphContext.size(); i++) {
-            Map<String, Object> node = graphContext.get(i);
-            String title = (String) node.get("title");
-            String summary = (String) node.get("summary");
-            Object tagsObj = node.get("tags");
-            
-            contextBuilder.append(String.format("[%d] 뉴스 기사: %s\n", i + 1, title));
-            contextBuilder.append(String.format("    - 요약: %s\n", summary));
-            if (tagsObj instanceof List<?>) {
-                contextBuilder.append(String.format("    - 연결된 그래프 마스터 태그: %s\n", tagsObj.toString()));
-            }
-            contextBuilder.append("\n");
-        }
-
-        // 3. 지식 그래프 컨텍스트와 사용자의 쿼리를 융합하여 추론용 최종 프롬프트 구성
-        String prompt = String.format(
-            "[System: You are an advanced AI News Analyst. Answer the user's inquiry based on the provided recent news knowledge graph context from Neo4j. Analyze the semantic relations between news articles and tags. Respond naturally and professionally in Korean.]\n\n" +
-            "%s\n" +
-            "[사용자 질문]\n" +
-            "%s\n\n" +
-            "위의 지식 그래프 데이터와 태그들의 연결 상태를 세밀히 분석하여, 단순한 나열이 아닌 기사들 간의 보이지 않는 인과관계, 시장 트렌드, 그리고 향후 영향에 대해 종합적으로 추론하여 상세한 분석 리포트 형식으로 답변해주세요.",
-            contextBuilder.toString(),
-            userQuery
-        );
-
-        log.info("[Graph RAG] Gemma 4 모델에 Graph RAG 추론 요청 전송");
-        
-        // 4. Ollama Cloud (Gemma 4) API 호출 및 결과 반환
-        return ollamaCloudService.queryGemma4ForReasoning(prompt);
-    }
-
     private static final java.util.concurrent.ExecutorService TRACK_EXECUTOR = java.util.concurrent.Executors.newFixedThreadPool(4);
 
     @Override

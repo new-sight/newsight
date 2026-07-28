@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import useGetStockInfo from "../news/hooks/GetStockInfo";
 import NewsItem from "../news/ui/stockInfo/components/NewsItem";
 import FavoriteStockBox from "./ui/FavoriteStockBox";
@@ -7,17 +8,67 @@ import { useFavoriteStocksNews } from "./hooks/useFavoriteStocksNews";
 
 interface FavoriteStockItemProps {
   symbol: string;
+  korName?: string;
   onRemove: (symbol: string) => void;
 }
 
-function FavoriteStockItem({ symbol, onRemove }: FavoriteStockItemProps) {
+function FavoriteStockItem({
+  symbol,
+  korName: initialKorName,
+  onRemove,
+}: FavoriteStockItemProps) {
   const navigate = useNavigate();
   const { data, loading } = useGetStockInfo(symbol);
+  const [fetchedKorName, setFetchedKorName] = useState<string | undefined>();
+
+  useEffect(() => {
+    // initialKorName이 전달되었으면 Supabase 별도 조회가 필요 없음
+    if (initialKorName) return;
+
+    let isMounted = true;
+    async function fetchKorNameFromSupabase() {
+      try {
+        const supabaseUrl =
+          import.meta.env.VITE_SUPABASE_URL ||
+          "https://rjtoalnqvrgsqmqcgrde.supabase.co";
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+        const response = await axios.get<SupabaseStockItem[]>(
+          `${supabaseUrl}/rest/v1/stock?select=kor_name,stock_name&stock_code=eq.${encodeURIComponent(
+            symbol,
+          )}&limit=1`,
+          {
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+            },
+          },
+        );
+        if (isMounted && response.data && response.data.length > 0) {
+          const item = response.data[0];
+          setFetchedKorName(item.kor_name || item.stock_name);
+        }
+      } catch (err) {
+        console.error(
+          `[FavoriteStock] Failed to fetch kor_name for ${symbol}:`,
+          err,
+        );
+      }
+    }
+
+    fetchKorNameFromSupabase();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [symbol, initialKorName]);
+
+  const korName = initialKorName || fetchedKorName;
+  const displayName = korName || data?.shortName || data?.companyName || symbol;
 
   return (
     <FavoriteStockBox
       ticker={symbol}
-      companyName={data?.shortName || symbol}
+      companyName={displayName}
       stockPrice={data?.regularMarketPrice || 0}
       changePercent={data?.regularMarketChangePercent || 0}
       currency={data?.currency}
@@ -29,28 +80,26 @@ function FavoriteStockItem({ symbol, onRemove }: FavoriteStockItemProps) {
 }
 
 export default function FavoriteStock() {
-  const [stocks, setStocks] = useState<string[]>([
-    "AAPL",
-    "NVDA",
-    "TSLA",
-    "MSFT",
-    "AMZN",
+  const [stocks, setStocks] = useState<{ symbol: string; korName?: string }[]>([
+    { symbol: "AAPL", korName: "애플" },
+    { symbol: "NVDA", korName: "엔비디아" },
+    { symbol: "TSLA", korName: "테슬라" },
+    { symbol: "MSFT", korName: "마이크로소프트" },
+    { symbol: "AMZN", korName: "아마존" },
   ]);
-  const [newTicker, setNewTicker] = useState("");
 
-  const handleAddStock = () => {
-    if (!newTicker.trim()) return;
-    const tickerUpper = newTicker.trim().toUpperCase();
-    if (stocks.includes(tickerUpper)) {
+  const handleAddStock = (symbol: string, korName?: string) => {
+    const targetSymbol = symbol.toUpperCase();
+    if (stocks.some((item) => item.symbol === targetSymbol)) {
       alert("이미 등록된 관심 종목입니다.");
       return;
     }
-    setStocks((prev) => [...prev, tickerUpper]);
-    setNewTicker("");
+
+    setStocks((prev) => [...prev, { symbol: targetSymbol, korName }]);
   };
 
   const handleRemoveStock = (ticker: string) => {
-    setStocks((prev) => prev.filter((s) => s !== ticker));
+    setStocks((prev) => prev.filter((item) => item.symbol !== ticker));
   };
 
   const {
@@ -76,25 +125,8 @@ export default function FavoriteStock() {
           </p>
         </div>
 
-        {/* 종목 추가 입력 폼 */}
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="티커 입력 (예: AAPL)"
-            value={newTicker}
-            onChange={(e) => setNewTicker(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddStock()}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder-white/40 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-          <button
-            type="button"
-            onClick={handleAddStock}
-            className="flex items-center gap-1 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer active:scale-95"
-          >
-            <span className="material-symbols-outlined text-base">add</span>
-            추가
-          </button>
-        </div>
+        {/* 독립 컴포넌트로 분리된 종목 검색 및 추가 SearchBar */}
+        <SearchBar onAddStock={handleAddStock} />
       </div>
 
       {/* 종목 카드 그리드 */}
@@ -107,15 +139,16 @@ export default function FavoriteStock() {
             등록된 관심 종목이 없습니다.
           </p>
           <p className="text-xs text-white/40 mt-1">
-            우측 상단에서 티커를 입력하여 종목을 추가해 보세요.
+            우측 상단에서 티커나 회사명을 입력하여 종목을 추가해 보세요.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {stocks.map((symbol) => (
+          {stocks.map((item) => (
             <FavoriteStockItem
-              key={symbol}
-              symbol={symbol}
+              key={item.symbol}
+              symbol={item.symbol}
+              korName={item.korName}
               onRemove={handleRemoveStock}
             />
           ))}

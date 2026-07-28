@@ -27,6 +27,10 @@ export interface StockInfoData {
   exchangeTimezoneName?: string;
   marketState?: string;
   error?: string;
+  stock_code?: string;
+  market_type?: string;
+  kor_name?: string;
+  stock_name?: string;
   [key: string]: unknown;
 }
 

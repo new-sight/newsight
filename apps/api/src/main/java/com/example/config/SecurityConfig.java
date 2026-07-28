@@ -43,8 +43,6 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-
-                
                 .requestMatchers(
                     HttpMethod.POST,
                     "/api/news/*/comments",
@@ -52,7 +50,6 @@ public class SecurityConfig {
                     "/api/news/*/scrap"
                 ).authenticated()
 
-             
                 .requestMatchers(
                     HttpMethod.DELETE,
                     "/api/news/*/comments/*"
@@ -62,7 +59,6 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/scraps/**"
                 ).authenticated()
-
 
                 // 로그인, 회원가입, 조회 API 공개
                 .requestMatchers(
@@ -75,9 +71,6 @@ public class SecurityConfig {
                     "/api/stock/**",
                     "/api/news/**"
                 ).permitAll()
-
-
-                // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
             .addFilterBefore(

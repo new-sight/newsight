@@ -4,6 +4,7 @@ import StockAnatomyCard from "./components/StockAnatomyCard";
 import StockEventMilestone from "./components/StockEventMilestone";
 import StockKeyMetricsBoard from "./components/StockKeyMetricsBoard";
 import StockChart from "./components/StockChart";
+import FavoriteStarButton from "../../../../shared/components/FavoriteStarButton";
 import GetStockInfo from "../../hooks/GetStockInfo";
 
 export default function StockInfo({ symbol }: { symbol: string }) {
@@ -26,7 +27,9 @@ export default function StockInfo({ symbol }: { symbol: string }) {
   }
 
   return (
-    <div className="w-full rounded-xl p-3 bg-gray-600/10 backdrop-blur-md shadow-lg flex flex-col gap-2">
+    <div className="w-full rounded-xl p-3 bg-gray-600/10 backdrop-blur-md shadow-lg flex flex-col gap-2 relative">
+      <FavoriteStarButton symbol={symbol} />
+
       <StockPriceHeader data={data} />
       <StockChart symbol={symbol} />
       <span className="text-lg font-bold">투자 지표</span>

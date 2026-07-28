@@ -2,6 +2,7 @@ package com.example.newsAIAgents.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -10,6 +11,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -17,6 +19,7 @@ import java.util.Map;
 public class StockServiceImpl implements StockService {
 
     private final StringRedisTemplate redisTemplate;
+    private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -24,8 +27,9 @@ public class StockServiceImpl implements StockService {
     private static final String REDIS_KEY_CRUMB = "yahoo:session:crumb";
     private static final String REDIS_KEY_STOCK_PREFIX = "stock:info:";
 
-    public StockServiceImpl(StringRedisTemplate redisTemplate) {
+    public StockServiceImpl(StringRedisTemplate redisTemplate, JdbcTemplate jdbcTemplate) {
         this.redisTemplate = redisTemplate;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     private static class YahooSession {
@@ -168,6 +172,8 @@ public class StockServiceImpl implements StockService {
         try {
             Map<String, Object> stockData = fetchQuoteWithRetry(finalSymbol, session, 0);
             if (stockData != null && !stockData.containsKey("error")) {
+                enrichWithSupabaseStockInfo(symbol, stockData);
+
                 // Redis에 10초 동안 저장하여 잦은 호출 방지 및 실시간성 보장
                 try {
                     redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(stockData), Duration.ofSeconds(10));
@@ -179,6 +185,42 @@ public class StockServiceImpl implements StockService {
         } catch (Exception e) {
             log.error("[Stock Service] 주식 데이터 획득 실패 - 티커: {}", finalSymbol, e);
             return Map.of("error", "주식 정보 조회 실패: " + e.getMessage());
+        }
+    }
+
+    /**
+     * DB (Supabase)의 stock 테이블에서 stock_code, market_type, kor_name, stock_name을 조회하여 주식 정보에 통합합니다.
+     */
+    private void enrichWithSupabaseStockInfo(String symbol, Map<String, Object> stockData) {
+        if (stockData == null || stockData.containsKey("error")) {
+            return;
+        }
+
+        try {
+            String rawCode = symbol != null ? symbol : "";
+            String cleanCode = rawCode.contains(".") ? rawCode.substring(0, rawCode.indexOf('.')) : rawCode;
+
+            String sql = "SELECT stock_code, market_type, kor_name, stock_name FROM stock " +
+                         "WHERE LOWER(stock_code) = LOWER(?) OR LOWER(stock_code) = LOWER(?) LIMIT 1";
+
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, rawCode, cleanCode);
+            if (!rows.isEmpty()) {
+                Map<String, Object> row = rows.get(0);
+                if (row.get("stock_code") != null) {
+                    stockData.put("stock_code", row.get("stock_code"));
+                }
+                if (row.get("market_type") != null) {
+                    stockData.put("market_type", row.get("market_type"));
+                }
+                if (row.get("kor_name") != null) {
+                    stockData.put("kor_name", row.get("kor_name"));
+                }
+                if (row.get("stock_name") != null) {
+                    stockData.put("stock_name", row.get("stock_name"));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Stock Service] Supabase DB stock 정보 연동 실패 (야후 데이터 유지): {}", e.getMessage());
         }
     }
 
