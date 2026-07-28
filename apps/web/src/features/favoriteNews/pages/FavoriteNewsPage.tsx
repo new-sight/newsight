@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { fetchFavoriteNews, deleteFavoriteNews } from "../api/favoriteNews";
+import {
+  fetchFavoriteNews,
+  deleteFavoriteNews,
+} from "../api/favoriteNews";
 import type { ScrappedNews } from "../api/favoriteNews";
+
 import FavoriteNewsCard from "../components/FavoriteNewsCard";
 
 export const FavoriteNewsPage = () => {
@@ -8,27 +12,30 @@ export const FavoriteNewsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const loadScraps = async () => {
+      try {
+        setIsLoading(true);
+
+        const data = await fetchFavoriteNews();
+
+        setNewsList(data);
+      } catch (error) {
+        console.error("스크랩 목록 로딩 실패:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     loadScraps();
   }, []);
-
-  const loadScraps = async () => {
-    try {
-      setIsLoading(true);
-
-      const data = await fetchFavoriteNews();
-      setNewsList(data);
-    } catch (error) {
-      console.error("스크랩 목록 로딩 실패:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleUnscrap = async (newsId: string) => {
     try {
       await deleteFavoriteNews(newsId);
 
-      setNewsList((prev) => prev.filter((item) => item.id !== newsId));
+      setNewsList((prev) =>
+        prev.filter((item) => item.id !== newsId)
+      );
     } catch (error) {
       console.error("스크랩 삭제 실패:", error);
     }
@@ -36,7 +43,6 @@ export const FavoriteNewsPage = () => {
 
   return (
     <div className="space-y-4 sm:-mt-4 -mx-4 lg:-mx-14">
-      {/* 헤더 타이틀 */}
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-2.5">
           <span className="material-symbols-outlined text-sky-400">
@@ -44,6 +50,7 @@ export const FavoriteNewsPage = () => {
           </span>
           관심 뉴스
         </h1>
+
         <p className="text-sm text-text-muted mt-1">
           스크랩한 뉴스를 한눈에 모아보고 바로 확인하세요.
         </p>
@@ -58,9 +65,11 @@ export const FavoriteNewsPage = () => {
           <span className="material-symbols-outlined text-5xl text-white/20 mb-3">
             newspaper
           </span>
+
           <p className="text-base font-semibold text-white/60">
             스크랩한 뉴스가 없습니다.
           </p>
+
           <p className="text-xs text-white/40 mt-1">
             뉴스 목록에서 별 아이콘을 눌러 스크랩해 보세요.
           </p>
