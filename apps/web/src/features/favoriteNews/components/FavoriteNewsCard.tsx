@@ -5,6 +5,13 @@ interface Props {
   onUnscrap: (id: string) => void;
 }
 
+function formatPublishedAt(publishedAt: string) {
+  const date = new Date(publishedAt);
+  if (Number.isNaN(date.getTime())) return publishedAt;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function FavoriteNewsCard({ news, onUnscrap }: Props) {
   return (
     <div className="group relative flex flex-col justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-white/10 hover:shadow-md hover:shadow-accent/10 overflow-hidden">
@@ -14,7 +21,7 @@ export default function FavoriteNewsCard({ news, onUnscrap }: Props) {
       />
 
       <div className="z-10 flex items-start justify-between gap-2">
-        <h3 className="line-clamp-2 text-sm font-bold text-white transition-colors group-hover:text-accent">
+        <h3 className="line-clamp-2 text-sm font-bold text-white">
           {news.title}
         </h3>
         <button
@@ -35,7 +42,7 @@ export default function FavoriteNewsCard({ news, onUnscrap }: Props) {
       <div className="z-10 mt-1.5 flex items-center gap-1.5 font-mono text-[11px] text-white/40">
         <span className="truncate">{news.source}</span>
         <span>·</span>
-        <span className="shrink-0">{news.publishedAt}</span>
+        <span className="shrink-0">{formatPublishedAt(news.publishedAt)}</span>
       </div>
 
       <a

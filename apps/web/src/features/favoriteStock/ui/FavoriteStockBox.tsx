@@ -59,7 +59,7 @@ export default function FavoriteStockBox({
 
       {/* 1행: 회사명 & 티커 */}
       <div className="flex items-center gap-1.5 min-w-0 z-10">
-        <h3 className="truncate text-xs font-bold text-white transition-colors group-hover:text-accent">
+        <h3 className="truncate text-xs font-bold text-white">
           {companyName || ticker}
         </h3>
         <span className="inline-block shrink-0 rounded bg-accent/20 px-1.5 py-0.2 font-mono text-[10px] font-bold text-accent border border-accent/30 shadow-inner">
