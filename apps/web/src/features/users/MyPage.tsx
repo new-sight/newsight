@@ -7,17 +7,15 @@ import { FavoriteNewsPage } from "../favoriteNews/pages/FavoriteNewsPage";
 
 export default function MyPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const rawTab =
-    searchParams.get("type") || searchParams.get("tab") || "profile";
+  const rawTab = searchParams.get("type") || searchParams.get("tab");
   const activeTab =
-    rawTab === "stock"
-      ? "favoriteStock"
-      : rawTab === "news"
-        ? "favoriteNews"
-        : rawTab;
+    rawTab === "news"
+      ? "favoriteNews"
+      : rawTab === "profile"
+        ? "profile"
+        : "favoriteStock";
 
   const [myInfo, setMyInfo] = useState<MyInfoItem | null>(null);
-  const [isLikesOpen, setIsLikesOpen] = useState(true);
 
   const storedLoginId = localStorage.getItem("loginId");
   const storedUsername = localStorage.getItem("username");
@@ -45,7 +43,51 @@ export default function MyPage() {
         <div className="space-y-6">
           {/* 사이드바 메뉴 */}
           <nav className="space-y-1">
-            {/* 1. 내 정보 관리 */}
+            {/* 1. 관심 종목 */}
+            <button
+              type="button"
+              onClick={() => setSearchParams({ tab: "stock" })}
+              className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "favoriteStock"
+                  ? "bg-accent/20 text-accent font-semibold border border-accent/30"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span
+                className="material-symbols-outlined text-lg text-emerald-400 leading-none"
+                style={{
+                  fontVariationSettings:
+                    activeTab === "favoriteStock" ? "'FILL' 1" : "'FILL' 0",
+                }}
+              >
+                show_chart
+              </span>
+              <span>관심 종목</span>
+            </button>
+
+            {/* 2. 관심 뉴스 */}
+            <button
+              type="button"
+              onClick={() => setSearchParams({ tab: "news" })}
+              className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "favoriteNews"
+                  ? "bg-accent/20 text-accent font-semibold border border-accent/30"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span
+                className="material-symbols-outlined text-lg text-sky-400 leading-none"
+                style={{
+                  fontVariationSettings:
+                    activeTab === "favoriteNews" ? "'FILL' 1" : "'FILL' 0",
+                }}
+              >
+                newspaper
+              </span>
+              <span>관심 뉴스</span>
+            </button>
+
+            {/* 3. 내 정보 관리 */}
             <button
               type="button"
               onClick={() => setSearchParams({ tab: "profile" })}
@@ -66,87 +108,6 @@ export default function MyPage() {
               </span>
               <span>내 정보 관리</span>
             </button>
-
-            {/* 2. 좋아요 (접기/펼치기 아코디언 메뉴) */}
-            <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => setIsLikesOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="material-symbols-outlined text-lg text-pink-500 leading-none"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    favorite
-                  </span>
-                  <span>좋아요</span>
-                </div>
-                <span
-                  className={`material-symbols-outlined text-base text-white/50 transition-transform duration-200 ${
-                    isLikesOpen ? "rotate-180" : ""
-                  }`}
-                >
-                  expand_more
-                </span>
-              </button>
-
-              {/* 하위 메뉴 2가지: 관심 종목, 관심 뉴스 (회색 점선 ㄴ자 연결구조) */}
-              {isLikesOpen && (
-                <div className="relative ml-1.5 space-y-1 pt-1 transition-all duration-200">
-                  {/* 하위 항목 1: 관심 종목 */}
-                  <div className="relative flex items-center">
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-3.5 top-0 h-1/2 w-4 border-l border-b border-dashed border-white/30 rounded-bl-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSearchParams({ type: "stock" })}
-                      className={`ml-8 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === "favoriteStock"
-                          ? "bg-accent/20 text-accent font-semibold border border-accent/30"
-                          : "text-white/60 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      <span
-                        className="material-symbols-outlined text-sm text-emerald-400 leading-none"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        show_chart
-                      </span>
-                      <span>관심 종목</span>
-                    </button>
-                  </div>
-
-                  {/* 하위 항목 2: 관심 뉴스 */}
-                  <div className="relative flex items-center">
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-3.5 top-0 h-1/2 w-4 border-l border-b border-dashed border-white/30 rounded-bl-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSearchParams({ type: "news" })}
-                      className={`ml-8 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === "favoriteNews"
-                          ? "bg-accent/20 text-accent font-semibold border border-accent/30"
-                          : "text-white/60 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      <span
-                        className="material-symbols-outlined text-sm text-sky-400 leading-none"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        newspaper
-                      </span>
-                      <span>관심 뉴스</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </nav>
         </div>
       </aside>

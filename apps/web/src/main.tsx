@@ -22,7 +22,6 @@ createRoot(document.getElementById("root")!).render(
           <Route path="login" element={<LoginPage />} />
           <Route path="login/create" element={<CreateAccount />} />
           <Route path="users/mypage" element={<MyPage />} />
-          <Route path="likes" element={<MyPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

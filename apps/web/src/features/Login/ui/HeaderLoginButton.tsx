@@ -124,21 +124,6 @@ export default function HeaderLoginButton() {
               <span className="tracking-tight">마이페이지</span>
             </Link>
 
-            {/* 메뉴 항목 2: 좋아요 */}
-            <Link
-              to="/likes"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              <span
-                className="material-symbols-outlined text-pink-500 leading-none"
-                style={{ fontSize: "18px", fontVariationSettings: "'FILL' 1" }}
-              >
-                favorite
-              </span>
-              <span className="tracking-tight">좋아요</span>
-            </Link>
-
             <div className="my-1 border-t border-white/10" />
 
             {/* 메뉴 항목 3: 로그아웃 */}

@@ -113,12 +113,6 @@ export default function FavoriteStock() {
           ))}
         </div>
       )}
-      <div className="text-xl font-bold text-white flex items-center gap-2.5 mt-10">
-        <span className="material-symbols-outlined text-emerald-400">
-          newspaper
-        </span>
-        관심 종목 관련 뉴스
-      </div>
     </div>
   );
 }
