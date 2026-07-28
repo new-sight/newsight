@@ -9,8 +9,8 @@ export default function Dropdown<T extends string>({
 }: {
   label: string;
   options: T[];
-  value: T | "all";
-  onChange: (value: T | "all") => void;
+  value: T[];
+  onChange: (value: T[]) => void;
   labels?: Record<T, string>;
 }) {
   const [open, setOpen] = useState(false);
@@ -33,10 +33,17 @@ export default function Dropdown<T extends string>({
     };
   }, [open]);
 
-  const display = value === "all" ? "전체" : (labels?.[value] ?? value);
-  const pick = (v: T | "all") => {
-    onChange(v);
-    setOpen(false);
+  const display =
+    value.length === 0
+      ? "전체"
+      : value.length === 1
+        ? (labels?.[value[0]] ?? value[0])
+        : `${labels?.[value[0]] ?? value[0]} 외 ${value.length - 1}건`;
+
+  const toggle = (opt: T) => {
+    onChange(
+      value.includes(opt) ? value.filter((v) => v !== opt) : [...value, opt],
+    );
   };
 
   return (
@@ -65,17 +72,18 @@ export default function Dropdown<T extends string>({
       {open && (
         <ul
           role="listbox"
+          aria-multiselectable="true"
           className="absolute top-full left-0 z-10 mt-1 min-w-[120px] overflow-hidden rounded-[4px] border border-border bg-bg-panel py-1 shadow-lg"
         >
           <li>
             <button
               type="button"
               role="option"
-              aria-selected={value === "all"}
-              onClick={() => pick("all")}
+              aria-selected={value.length === 0}
+              onClick={() => onChange([])}
               className={
                 "block w-full px-3 py-1.5 text-left text-[12.5px] font-semibold " +
-                (value === "all"
+                (value.length === 0
                   ? "bg-accent/15 text-accent"
                   : "text-text-muted hover:bg-white/5")
               }
@@ -88,15 +96,18 @@ export default function Dropdown<T extends string>({
               <button
                 type="button"
                 role="option"
-                aria-selected={value === opt}
-                onClick={() => pick(opt)}
+                aria-selected={value.includes(opt)}
+                onClick={() => toggle(opt)}
                 className={
-                  "block w-full px-3 py-1.5 text-left text-[12.5px] font-semibold " +
-                  (value === opt
+                  "flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-[12.5px] font-semibold " +
+                  (value.includes(opt)
                     ? "bg-accent/15 text-accent"
                     : "text-text-muted hover:bg-white/5")
                 }
               >
+                <span className="w-3 shrink-0">
+                  {value.includes(opt) ? "✓" : ""}
+                </span>
                 {labels?.[opt] ?? opt}
               </button>
             </li>

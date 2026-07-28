@@ -40,7 +40,18 @@
       "Bash(npm ls *)",
       "Bash(node check_mypage.mjs)",
       "Bash(grep -c \"좋아요\" /dev/null; cd /private/tmp/claude-502/-Users-tgyeong-Project-newsight/555118ba-1bb3-4e34-8ab1-9307f8a1b5c8/scratchpad && node check_mypage.mjs > out.txt 2>&1; grep -o \"좋아요\\\\|관심 종목\\\\|스크랩\" out.txt | sort | uniq -c)",
-      "Read(//dev/**)"
+      "Read(//dev/**)",
+      "Bash(./gradlew compileJava compileTestJava -q)",
+      "Bash(xargs -I{} sh -c 'echo {}; grep -o \"tests=\\\\\"[0-9]*\\\\\" skipped=\\\\\"[0-9]*\\\\\" failures=\\\\\"[0-9]*\\\\\" errors=\\\\\"[0-9]*\\\\\"\" {}')",
+      "Bash(curl -s \"http://localhost:8080/api/news/list?country=KOREA&country=USA&category=TECHNOLOGY&page=0&size=3\")",
+      "Bash(curl -s \"http://localhost:8080/api/news/list?country=KOREA&country=USA&page=0&size=20\")",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s \"http://localhost:8080/api/news/list?category=BUSINESS&category=SCIENCE&page=0&size=20\")",
+      "Bash(node check_dashboard_filter.mjs)",
+      "Bash(node check_dashboard_home.mjs)",
+      "Bash(python3 -c \"import json,sys;print\\('all:',json.load\\(sys.stdin\\)['totalCount']\\)\")",
+      "Bash(curl -s \"http://localhost:8080/api/news/list?category=TECHNOLOGY&category=BUSINESS&page=0&size=1\")",
+      "Bash(python3 -c \"import json,sys;print\\('tech+biz:',json.load\\(sys.stdin\\)['totalCount']\\)\")"
     ]
   }
 }

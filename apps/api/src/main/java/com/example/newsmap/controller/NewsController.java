@@ -48,10 +48,10 @@ public class NewsController {
     })
     @GetMapping("/list")
     public NewsListResponse getNewsList(
-            @Parameter(description = "국가 필터 (예: KOREA, USA)", example = "KOREA")
-            @RequestParam(required = false) Country country,
-            @Parameter(description = "카테고리 필터 (예: TECHNOLOGY, BUSINESS)", example = "TECHNOLOGY")
-            @RequestParam(required = false) Category category,
+            @Parameter(description = "국가 필터 (복수 선택 가능, 예: KOREA, USA)", example = "KOREA")
+            @RequestParam(required = false) List<Country> country,
+            @Parameter(description = "카테고리 필터 (복수 선택 가능, 예: TECHNOLOGY, BUSINESS)", example = "TECHNOLOGY")
+            @RequestParam(required = false) List<Category> category,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 당 항목 수", example = "20")
