@@ -6,10 +6,14 @@ export interface NewsItemData {
   title: string;
   summary: string;
   link: string;
-  tags: string; // Supabase stores tags as comma-separated string (e.g. "Apple, TSLA")
+  tags: string;
   published_at?: string;
   sentiment_score?: number;
   source?: string;
+  likeCount?: number;
+  commentCount?: number;
+  likedByMe?: boolean;
+  scrappedByMe?: boolean;
 }
 
 export function useGetStockNews(stockCode: string | null | undefined) {
@@ -29,8 +33,11 @@ export function useGetStockNews(stockCode: string | null | undefined) {
     try {
       // Get news list with details from Spring Boot API (queries Neo4j and JPA under the hood)
       const baseUrl = import.meta.env.VITE_API_URL || "";
+      const token = localStorage.getItem("accessToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.get<NewsItemData[]>(
         `${baseUrl}/api/news/list/${stockCode}`,
+        { headers },
       );
       setNewsList(response.data);
     } catch (err: unknown) {
@@ -49,11 +56,59 @@ export function useGetStockNews(stockCode: string | null | undefined) {
   }, [stockCode]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStockNews();
   }, [fetchStockNews]);
 
-  return { newsList, loading, error, refetch: fetchStockNews };
+  const applyLikeResult = (newsId: string, liked: boolean) => {
+    setNewsList((prev) =>
+      prev.map((item) => {
+        if (item.id === newsId) {
+          const delta = liked ? 1 : -1;
+          const currentCount = item.likeCount ?? 0;
+          return {
+            ...item,
+            likedByMe: liked,
+            likeCount: Math.max(
+              0,
+              currentCount + (item.likedByMe === liked ? 0 : delta),
+            ),
+          };
+        }
+        return item;
+      }),
+    );
+  };
+
+  const applyScrapResult = (newsId: string, scrapped: boolean) => {
+    setNewsList((prev) =>
+      prev.map((item) =>
+        item.id === newsId ? { ...item, scrappedByMe: scrapped } : item,
+      ),
+    );
+  };
+
+  const adjustCommentCount = (newsId: string, delta: number) => {
+    setNewsList((prev) =>
+      prev.map((item) =>
+        item.id === newsId
+          ? {
+              ...item,
+              commentCount: Math.max(0, (item.commentCount ?? 0) + delta),
+            }
+          : item,
+      ),
+    );
+  };
+
+  return {
+    newsList,
+    loading,
+    error,
+    refetch: fetchStockNews,
+    applyLikeResult,
+    applyScrapResult,
+    adjustCommentCount,
+  };
 }
 
 export default useGetStockNews;

@@ -16,14 +16,19 @@ export default function StockPriceHeader({
   const priceColor = isUp ? "text-up" : isDown ? "text-down" : "text-white";
   const prefix = isUp ? "+" : "";
 
+  const stockCode = data.stock_code || data.symbol;
+  const marketType =
+    data.market_type || data.fullExchangeName || "STOCK MARKET";
+  const stockName = data.kor_name || data.stock_name || data.companyName;
+
   return (
     <div className="flex flex-col gap-1">
       <div className="rounded-lg p-1 text-xs text-gray-400">
         {/* (주식코드) · (주식장) */}
-        {data.symbol} · {data.fullExchangeName || "STOCK MARKET"}
+        {stockCode} · {marketType}
       </div>
       <div className="text-xl font-bold rounded-lg px-1.5 text-white">
-        {data.companyName}
+        {stockName}
       </div>
       <div className="flex gap-2 rounded-lg px-1.5 items-center text-sm">
         {/* regularMarketPrice */}

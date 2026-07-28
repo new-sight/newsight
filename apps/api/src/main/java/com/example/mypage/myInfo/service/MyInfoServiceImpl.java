@@ -3,6 +3,10 @@ package com.example.mypage.myInfo.service;
 import com.example.auth.domain.User;
 import com.example.mypage.myInfo.dto.MyInfoResponse;
 import com.example.mypage.myInfo.repository.MyInfoRepository;
+import com.example.newsmap.repository.CommentRepository;
+import com.example.newsmap.repository.NewsLikeRepository;
+import com.example.newsmap.repository.NewsScrapRepository;
+import com.example.scrap.repository.ScrapRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +21,10 @@ import java.util.Optional;
 public class MyInfoServiceImpl implements MyInfoService {
 
     private final MyInfoRepository myInfoRepository;
+    private final CommentRepository commentRepository;
+    private final NewsLikeRepository newsLikeRepository;
+    private final NewsScrapRepository newsScrapRepository;
+    private final ScrapRepository scrapRepository;
 
     @Override
     public MyInfoResponse getMyInfoByUsername(String username) {
@@ -65,6 +73,22 @@ public class MyInfoServiceImpl implements MyInfoService {
                 .scrappedNewsIds(user.getScrappedNewsIds() != null ? user.getScrappedNewsIds() : "")
                 .favoriteStockTickers(user.getFavoriteStockTickers() != null ? user.getFavoriteStockTickers() : "")
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void deleteAccount(String loginId) {
+        User user = myInfoRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        Long userId = user.getId();
+        commentRepository.deleteByUser_Id(userId);
+        newsLikeRepository.deleteByUser_Id(userId);
+        newsScrapRepository.deleteByUser_Id(userId);
+        scrapRepository.deleteByUserId(userId);
+        myInfoRepository.delete(user);
+
+        log.info("[MyInfoService] Deleted account -> ID: {}, LoginId: {}", userId, loginId);
     }
 
     private String maskLoginId(String loginId) {

@@ -1,23 +1,22 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { fetchMyInfo, type MyInfoItem } from "./api/MyInfo";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { deleteMyAccount, fetchMyInfo, type MyInfoItem } from "./api/MyInfo";
 import MyPageBox from "./ui/mypage/MyPageBox";
 import FavoriteStock from "../favoriteStock/FavoriteStock";
 import { FavoriteNewsPage } from "../favoriteNews/pages/FavoriteNewsPage";
 
 export default function MyPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const rawTab =
-    searchParams.get("type") || searchParams.get("tab") || "profile";
+  const rawTab = searchParams.get("type") || searchParams.get("tab");
   const activeTab =
-    rawTab === "stock"
-      ? "favoriteStock"
-      : rawTab === "news"
-        ? "favoriteNews"
-        : rawTab;
+    rawTab === "news"
+      ? "favoriteNews"
+      : rawTab === "profile"
+        ? "profile"
+        : "favoriteStock";
 
   const [myInfo, setMyInfo] = useState<MyInfoItem | null>(null);
-  const [isLikesOpen, setIsLikesOpen] = useState(true);
 
   const storedLoginId = localStorage.getItem("loginId");
   const storedUsername = localStorage.getItem("username");
@@ -38,6 +37,29 @@ export default function MyPage() {
     return createdAt.includes("T") ? createdAt.split("T")[0] : createdAt;
   };
 
+  const handleDeleteAccount = async () => {
+    if (
+      !window.confirm(
+        "정말 탈퇴하시겠습니까? 관심 종목, 관심 뉴스, 댓글 등 모든 데이터가 삭제되며 복구할 수 없습니다.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteMyAccount();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("loginId");
+      localStorage.removeItem("username");
+      window.dispatchEvent(new Event("authChange"));
+      alert("회원 탈퇴가 완료되었습니다.");
+      navigate("/login");
+    } catch (err) {
+      console.error("회원 탈퇴 실패:", err);
+      alert("회원 탈퇴에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="flex w-full min-h-[calc(100vh-4rem)] bg-bg-panel text-white rounded-[10px] overflow-hidden">
       {/* 좌측 사이드바 */}
@@ -45,7 +67,51 @@ export default function MyPage() {
         <div className="space-y-6">
           {/* 사이드바 메뉴 */}
           <nav className="space-y-1">
-            {/* 1. 내 정보 관리 */}
+            {/* 1. 관심 종목 */}
+            <button
+              type="button"
+              onClick={() => setSearchParams({ tab: "stock" })}
+              className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "favoriteStock"
+                  ? "bg-accent/20 text-accent font-semibold border border-accent/30"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span
+                className="material-symbols-outlined text-lg text-emerald-400 leading-none"
+                style={{
+                  fontVariationSettings:
+                    activeTab === "favoriteStock" ? "'FILL' 1" : "'FILL' 0",
+                }}
+              >
+                show_chart
+              </span>
+              <span>관심 종목</span>
+            </button>
+
+            {/* 2. 관심 뉴스 */}
+            <button
+              type="button"
+              onClick={() => setSearchParams({ tab: "news" })}
+              className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "favoriteNews"
+                  ? "bg-accent/20 text-accent font-semibold border border-accent/30"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span
+                className="material-symbols-outlined text-lg text-sky-400 leading-none"
+                style={{
+                  fontVariationSettings:
+                    activeTab === "favoriteNews" ? "'FILL' 1" : "'FILL' 0",
+                }}
+              >
+                newspaper
+              </span>
+              <span>관심 뉴스</span>
+            </button>
+
+            {/* 3. 내 정보 관리 */}
             <button
               type="button"
               onClick={() => setSearchParams({ tab: "profile" })}
@@ -66,6 +132,8 @@ export default function MyPage() {
               </span>
               <span>내 정보 관리</span>
             </button>
+<<<<<<< HEAD
+=======
 
             {/* 2. 좋아요 (접기/펼치기 아코디언 메뉴) */}
             <div className="space-y-1">
@@ -76,10 +144,10 @@ export default function MyPage() {
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className="material-symbols-outlined text-lg text-pink-500 leading-none"
+                    className="material-symbols-rounded text-lg text-yellow-400 leading-none"
                     style={{ fontVariationSettings: "'FILL' 1" }}
                   >
-                    favorite
+                    star
                   </span>
                   <span>좋아요</span>
                 </div>
@@ -147,6 +215,7 @@ export default function MyPage() {
                 </div>
               )}
             </div>
+>>>>>>> bed80c090ccf15d7c2dfaa3c9e70fd6aac56e480
           </nav>
         </div>
       </aside>
@@ -188,6 +257,17 @@ export default function MyPage() {
             label="유저구분"
             value={myInfo?.role === "ROLE_ADMIN" ? "관리자" : "일반회원"}
           />
+        </div>
+
+        {/* 탈퇴하기 */}
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            className="rounded-[10px] px-3.5 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
+          >
+            탈퇴하기
+          </button>
         </div>
       </>
     )}

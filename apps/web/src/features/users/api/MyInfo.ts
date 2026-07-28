@@ -31,3 +31,14 @@ export async function fetchMyInfo(username?: string): Promise<MyInfoItem> {
 
   return response.data;
 }
+
+export async function deleteMyAccount(): Promise<void> {
+  const token =
+    localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+  await axios.delete(`${API_BASE_URL}/api/v1/users/me`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+}

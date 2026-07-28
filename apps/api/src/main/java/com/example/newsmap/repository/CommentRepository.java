@@ -12,4 +12,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     @Query("SELECT c.newsId AS newsId, COUNT(c) AS cnt FROM Comment c WHERE c.newsId IN :newsIds GROUP BY c.newsId")
     List<NewsIdCount> countGroupByNewsIdIn(@Param("newsIds") List<String> newsIds);
+
+    void deleteByUser_Id(Long userId);
 }

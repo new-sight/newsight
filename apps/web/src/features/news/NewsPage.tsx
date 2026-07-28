@@ -1,20 +1,11 @@
-import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import StockInfo from "./ui/stockInfo/StockInfo";
 import StockRelatedNews from "./ui/StockRelatedNews";
+import NewsSearchBar from "./ui/NewsSearchBar";
 
 export default function NewsPage() {
   const { stockCode } = useParams<{ stockCode: string }>();
   const navigate = useNavigate();
-  const [searchInput, setSearchInput] = useState("");
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = searchInput.trim();
-    if (trimmed) {
-      navigate(`/news/${trimmed}`);
-    }
-  };
 
   if (!stockCode) {
     return (
@@ -31,28 +22,7 @@ export default function NewsPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSearchSubmit} className="relative group w-full">
-            <div className="absolute -inset-0.5 bg-linear-to-r from-accent to-up rounded-2xl blur-md opacity-25 transition duration-300"></div>
-            <div className="relative flex items-center bg-bg-panel border border-border rounded-xl px-4 py-3 shadow-2xl transition-all duration-300">
-              <span className="material-symbols-outlined text-text-muted text-[24px] mr-3 select-none">
-                search
-              </span>
-              <input
-                type="text"
-                placeholder="주식코드 입력 (예: AAPL, 005930)"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full bg-transparent placeholder-text-muted border-none outline-none text-base sm:text-lg font-sans"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="ml-3 px-5 py-2 bg-accent hover:bg-accent/90 text-white font-medium rounded-lg transition-colors cursor-pointer text-sm sm:text-base whitespace-nowrap shadow-md hover:shadow-accent/20"
-              >
-                검색
-              </button>
-            </div>
-          </form>
+          <NewsSearchBar />
 
           {/* 주요 종목 추천 태그 */}
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
