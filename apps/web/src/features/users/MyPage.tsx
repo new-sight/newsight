@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { fetchMyInfo, type MyInfoItem } from "./api/MyInfo";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { deleteMyAccount, fetchMyInfo, type MyInfoItem } from "./api/MyInfo";
 import MyPageBox from "./ui/mypage/MyPageBox";
 import FavoriteStock from "../favoriteStock/FavoriteStock";
 import { FavoriteNewsPage } from "../favoriteNews/pages/FavoriteNewsPage";
 
 export default function MyPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("type") || searchParams.get("tab");
   const activeTab =
@@ -34,6 +35,29 @@ export default function MyPage() {
   const formatCreatedAt = (createdAt?: string) => {
     if (!createdAt || createdAt === "-") return "-";
     return createdAt.includes("T") ? createdAt.split("T")[0] : createdAt;
+  };
+
+  const handleDeleteAccount = async () => {
+    if (
+      !window.confirm(
+        "정말 탈퇴하시겠습니까? 관심 종목, 관심 뉴스, 댓글 등 모든 데이터가 삭제되며 복구할 수 없습니다.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteMyAccount();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("loginId");
+      localStorage.removeItem("username");
+      window.dispatchEvent(new Event("authChange"));
+      alert("회원 탈퇴가 완료되었습니다.");
+      navigate("/login");
+    } catch (err) {
+      console.error("회원 탈퇴 실패:", err);
+      alert("회원 탈퇴에 실패했습니다.");
+    }
   };
 
   return (
@@ -149,6 +173,17 @@ export default function MyPage() {
             label="유저구분"
             value={myInfo?.role === "ROLE_ADMIN" ? "관리자" : "일반회원"}
           />
+        </div>
+
+        {/* 탈퇴하기 */}
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            className="rounded-[10px] px-3.5 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
+          >
+            탈퇴하기
+          </button>
         </div>
       </>
     )}

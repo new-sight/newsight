@@ -1,7 +1,28 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs -I{} echo {})"
+      "Bash(xargs -I{} echo {})",
+      "Bash(lsof -nP -iTCP:5173 -sTCP:LISTEN)",
+      "Bash(lsof -nP -iTCP:8080 -sTCP:LISTEN)",
+      "Bash(curl -sS -o /dev/null -w \"HTTP:%{http_code} TIME:%{time_total}s\\\\n\" --max-time 8 https://butterflyeffect.o-r.kr/actuator/health)",
+      "Bash(curl -sS -o /dev/null -w \"HTTP:%{http_code} TIME:%{time_total}s\\\\n\" --max-time 8 \"https://butterflyeffect.o-r.kr/api/v1/stocks\")",
+      "Bash(curl -sS -o /dev/null -w \"HTTP:%{http_code} TIME:%{time_total}s\\\\n\" --max-time 8 \"https://butterflyeffect.o-r.kr/api/v1/news\")",
+      "Bash(nslookup butterflyeffect.o-r.kr)",
+      "Bash(ping -c 3 -t 5 butterflyeffect.o-r.kr)",
+      "Bash(curl -sS -i --max-time 10 -X POST https://butterflyeffect.o-r.kr/api/news/1/like -H 'Origin: http://localhost:5173' -H 'Content-Type: application/json')",
+      "Bash(curl -sS -i --max-time 10 -X OPTIONS https://butterflyeffect.o-r.kr/api/news/1/like -H 'Origin: http://localhost:5173' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization,content-type')",
+      "Bash(curl -sS -i --max-time 10 -X OPTIONS https://butterflyeffect.o-r.kr/api/scraps/news/1 -H 'Origin: http://localhost:5173' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization')",
+      "Bash(curl -sS -i --max-time 10 -X POST https://butterflyeffect.o-r.kr/api/news/1/comments -H 'Origin: http://localhost:5173' -H 'Content-Type: application/json' -d '{\"content\":\"test\"}')",
+      "Bash(curl -sS -i --max-time 10 -X POST https://butterflyeffect.o-r.kr/api/scraps/news/1 -H 'Origin: http://localhost:5173')",
+      "Bash(curl -sS -i --max-time 10 \"https://butterflyeffect.o-r.kr/api/v1/news?page=0&size=1\")",
+      "Bash(curl -sS -i --max-time 10 \"https://butterflyeffect.o-r.kr/api/news?page=0&size=1\")",
+      "Bash(curl -sS --max-time 10 \"https://butterflyeffect.o-r.kr/api/v1/news\" -o /dev/null -w \"HTTP:%{http_code}\\\\n\")",
+      "Bash(curl -sS --max-time 10 \"https://butterflyeffect.o-r.kr/api/news\" -o /dev/null -w \"HTTP:%{http_code}\\\\n\")",
+      "Bash(curl -sS --max-time 10 \"https://butterflyeffect.o-r.kr/actuator/mappings\" -o /dev/null -w \"HTTP:%{http_code}\\\\n\")",
+      "Bash(curl -sS --max-time 10 \"https://butterflyeffect.o-r.kr/api/news/list?page=0&size=1\" -o /dev/null -w \"HTTP:%{http_code}\\\\n\")",
+      "Bash(echo \"exit:$?\")",
+      "Bash(curl -sS -i --max-time 5 -X POST \"http://localhost:8080/api/news/1/like\")",
+      "Bash(curl -sS -i --max-time 5 -X POST \"http://localhost:8080/api/scraps/news/1\")"
     ]
   }
 }

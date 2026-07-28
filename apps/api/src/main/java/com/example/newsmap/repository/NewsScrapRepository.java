@@ -14,4 +14,6 @@ public interface NewsScrapRepository extends JpaRepository<NewsScrap, Long> {
 
     @Query("SELECT s.newsId FROM NewsScrap s WHERE s.user.id = :userId AND s.newsId IN :newsIds")
     Set<String> findScrappedNewsIds(@Param("userId") Long userId, @Param("newsIds") List<String> newsIds);
+
+    void deleteByUser_Id(Long userId);
 }

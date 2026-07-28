@@ -19,4 +19,6 @@ public interface NewsLikeRepository extends JpaRepository<NewsLike, Long> {
 
     @Query("SELECT l.newsId FROM NewsLike l WHERE l.user.id = :userId AND l.newsId IN :newsIds")
     Set<String> findLikedNewsIds(@Param("userId") Long userId, @Param("newsIds") List<String> newsIds);
+
+    void deleteByUser_Id(Long userId);
 }
