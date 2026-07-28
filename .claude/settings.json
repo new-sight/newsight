@@ -29,7 +29,18 @@
       "Bash(echo \"local exit:$?\")",
       "Bash(git config *)",
       "Bash(echo \"global exit:$?\")",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"search done: $?\")",
+      "Bash(lsof -nP -iTCP -sTCP:LISTEN)",
+      "Bash(kill 26321)",
+      "Bash(which chromium-cli *)",
+      "Read(//usr/local/bin/**)",
+      "Bash(find / -maxdepth 6 -iname \"*chromium-cli*\")",
+      "Bash(npm ls *)",
+      "Bash(node check_mypage.mjs)",
+      "Bash(grep -c \"좋아요\" /dev/null; cd /private/tmp/claude-502/-Users-tgyeong-Project-newsight/555118ba-1bb3-4e34-8ab1-9307f8a1b5c8/scratchpad && node check_mypage.mjs > out.txt 2>&1; grep -o \"좋아요\\\\|관심 종목\\\\|스크랩\" out.txt | sort | uniq -c)",
+      "Read(//dev/**)"
     ]
   }
 }

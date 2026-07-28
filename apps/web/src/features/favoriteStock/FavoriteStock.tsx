@@ -4,6 +4,7 @@ import axios from "axios";
 import useGetStockInfo from "../news/hooks/GetStockInfo";
 import NewsItem from "../news/ui/stockInfo/components/NewsItem";
 import FavoriteStockBox from "./ui/FavoriteStockBox";
+import SearchBar, { type SupabaseStockItem } from "./ui/SearchBar";
 import { useFavoriteStocksNews } from "./hooks/useFavoriteStocksNews";
 
 interface FavoriteStockItemProps {
