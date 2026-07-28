@@ -6,7 +6,7 @@ export interface NewsItemData {
   title: string;
   summary: string;
   link: string;
-  tags: string; // Supabase stores tags as comma-separated string (e.g. "Apple, TSLA")
+  tags: string;
   published_at?: string;
   sentiment_score?: number;
   source?: string;

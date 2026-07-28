@@ -77,6 +77,20 @@ export default function StockRelatedNews() {
   const itemsPerPage = 5;
   const totalPages = Math.ceil(newsList.length / itemsPerPage);
 
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = startPage + maxVisiblePages - 1;
+
+  if (endPage > totalPages) {
+    endPage = totalPages;
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+
+  const visiblePages = Array.from(
+    { length: Math.max(0, endPage - startPage + 1) },
+    (_, i) => startPage + i,
+  );
+
   // Get current page news
   const displayedNews = newsList.slice(
     (currentPage - 1) * itemsPerPage,
@@ -122,7 +136,7 @@ export default function StockRelatedNews() {
           </button>
 
           {/* Page Numbers */}
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {visiblePages.map((page) => (
             <button
               key={page}
               onClick={() => handlePageChange(page)}

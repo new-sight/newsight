@@ -46,11 +46,11 @@ export default function NewsItem({
       <h4 className="text-sm text-text-muted leading-relaxed">
         {news.summary}
       </h4>
-      <p className="text-xs text-text-muted mt-1">
+      <p className="text-xs text-text-muted">
         {formattedDate} · {source}
       </p>
       {tagList.length > 0 && (
-        <div className="flex gap-2 w-full flex-wrap mt-2">
+        <div className="flex gap-2 w-full flex-wrap">
           {tagList.map((tag, idx) => (
             <NewsTag key={idx} tag={tag} />
           ))}
@@ -58,12 +58,14 @@ export default function NewsItem({
       )}
 
       {/* Action Bar (Like, Comment, Link, Scrap) */}
-      <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-2.5">
+      <div className="flex items-center gap-3 border-t border-white/10 pt-2.5">
         <button
           type="button"
           onClick={() => onLikeClick(news.id)}
           className={`flex items-center gap-1 text-xs transition-colors ${
-            news.likedByMe ? "text-pink-400 font-semibold" : "text-text-muted hover:text-white"
+            news.likedByMe
+              ? "text-pink-400 font-semibold"
+              : "text-text-muted hover:text-white"
           }`}
         >
           <span
