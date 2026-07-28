@@ -19,10 +19,10 @@ export default function MapSection({
   onCountryChange,
   news,
 }: {
-  categoryFilter: NewsCategory | "all";
-  countryFilter: Country | "all";
-  onCategoryChange: (value: NewsCategory | "all") => void;
-  onCountryChange: (value: Country | "all") => void;
+  categoryFilter: NewsCategory[];
+  countryFilter: Country[];
+  onCategoryChange: (value: NewsCategory[]) => void;
+  onCountryChange: (value: Country[]) => void;
   news: NewsListItem[];
 }) {
   const rotBarRef = useRef<HTMLDivElement>(null);
@@ -72,9 +72,9 @@ export default function MapSection({
       </div>
 
       <Globe
-        countryFilter={countryFilter}
+        countryFilter={countryFilter.length === 1 ? countryFilter[0] : "all"}
         stats={countryStats}
-        scatterNews={countryFilter === "all" ? [] : news}
+        scatterNews={countryFilter.length > 0 ? news : []}
         rotBarRef={rotBarRef}
         onRotationChange={setRotationDeg}
       />

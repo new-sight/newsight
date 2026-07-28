@@ -56,7 +56,7 @@ class NewsControllerTest {
 
     @Test
     void passesCountryAndCategoryQueryParamsToService() throws Exception {
-        when(newsService.getNewsList(Country.JAPAN, Category.BUSINESS, 0, 20, null)).thenReturn(
+        when(newsService.getNewsList(List.of(Country.JAPAN), List.of(Category.BUSINESS), 0, 20, null)).thenReturn(
                 new NewsListResponse(List.of(
                         new NewsItemResponse("e38acf8c-03ee-5c32-8bbe-c73f124ca383", "title", "source", Country.JAPAN,
                                 Category.BUSINESS, LocalDateTime.parse("2026-07-21T10:06:00"),
@@ -68,7 +68,20 @@ class NewsControllerTest {
         mockMvc.perform(get("/api/news/list").param("country", "JAPAN").param("category", "BUSINESS"))
                 .andExpect(status().isOk());
 
-        verify(newsService).getNewsList(Country.JAPAN, Category.BUSINESS, 0, 20, null);
+        verify(newsService).getNewsList(List.of(Country.JAPAN), List.of(Category.BUSINESS), 0, 20, null);
+    }
+
+    @Test
+    void passesMultipleCountryAndCategoryQueryParamsToService() throws Exception {
+        when(newsService.getNewsList(List.of(Country.JAPAN, Country.KOREA), List.of(Category.BUSINESS, Category.TECHNOLOGY), 0, 20, null))
+                .thenReturn(new NewsListResponse(List.of(), 0, 20, 0));
+
+        mockMvc.perform(get("/api/news/list")
+                        .param("country", "JAPAN", "KOREA")
+                        .param("category", "BUSINESS", "TECHNOLOGY"))
+                .andExpect(status().isOk());
+
+        verify(newsService).getNewsList(List.of(Country.JAPAN, Country.KOREA), List.of(Category.BUSINESS, Category.TECHNOLOGY), 0, 20, null);
     }
 
     @Test

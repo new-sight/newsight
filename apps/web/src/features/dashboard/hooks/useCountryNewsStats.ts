@@ -12,7 +12,7 @@ export type CountryStat = {
 
 const SAMPLE_SIZE = 40;
 
-export function useCountryNewsStats(categoryFilter: NewsCategory | "all") {
+export function useCountryNewsStats(categoryFilter: NewsCategory[]) {
   const [stats, setStats] = useState<CountryStat[]>([]);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function useCountryNewsStats(categoryFilter: NewsCategory | "all") {
       COUNTRY_OPTIONS.map((country) =>
         fetchNewsList({
           country,
-          category: categoryFilter === "all" ? undefined : categoryFilter,
+          category: categoryFilter.length ? categoryFilter : undefined,
           page: 0,
           size: SAMPLE_SIZE,
         }),

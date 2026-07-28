@@ -31,8 +31,10 @@ public class NewsService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
-    public NewsListResponse getNewsList(Country country, Category category, int page, int size, String loginId) {
-        Page<NewsArticle> result = newsArticleRepository.findByFilters(country, category, PageRequest.of(page, size));
+    public NewsListResponse getNewsList(List<Country> countries, List<Category> categories, int page, int size, String loginId) {
+        List<Country> countryFilter = (countries == null || countries.isEmpty()) ? null : countries;
+        List<Category> categoryFilter = (categories == null || categories.isEmpty()) ? null : categories;
+        Page<NewsArticle> result = newsArticleRepository.findByFilters(countryFilter, categoryFilter, PageRequest.of(page, size));
         List<String> newsIds = result.getContent().stream()
                 .filter(Objects::nonNull)
                 .map(article -> article.getId())

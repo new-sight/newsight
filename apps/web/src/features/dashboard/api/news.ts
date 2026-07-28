@@ -56,20 +56,22 @@ function authHeaders(): Record<string, string> {
 
 // 뉴스 목록 조회
 export async function fetchNewsList(params: {
-  country?: Country;
-  category?: NewsCategory;
+  country?: Country | Country[];
+  category?: NewsCategory | NewsCategory[];
   page?: number;
   size?: number;
 }): Promise<NewsListResponse> {
   const query = new URLSearchParams();
 
-  if (params.country) {
-    query.set("country", params.country);
-  }
+  const appendAll = (key: string, value?: string | string[]) => {
+    if (!value) return;
+    for (const v of Array.isArray(value) ? value : [value]) {
+      query.append(key, v);
+    }
+  };
 
-  if (params.category) {
-    query.set("category", params.category);
-  }
+  appendAll("country", params.country);
+  appendAll("category", params.category);
 
   query.set("page", String(params.page ?? 0));
   query.set("size", String(params.size ?? 20));
