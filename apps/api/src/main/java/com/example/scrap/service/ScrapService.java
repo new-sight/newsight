@@ -73,11 +73,8 @@ public class ScrapService {
                         )
                 );
 
-
         scrapRepository.delete(scrap);
     }
-
-
 
     // =========================
     // 내 스크랩 뉴스 조회
@@ -191,7 +188,6 @@ public class ScrapService {
     public List<FavoriteStockResponse> getFavoriteStocks(
             Long userId
     ) {
-
 
         return favoriteStockRepository.findByUserId(userId)
                 .stream()
