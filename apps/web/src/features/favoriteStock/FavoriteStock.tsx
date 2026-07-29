@@ -12,7 +12,7 @@ import {
   fetchFavoriteStocks,
   removeFavoriteStock,
   type FavoriteStock as FavoriteStockResponse,
-} from "./api/FavoriteStock";
+} from "./api/favoriteStock";
 
 type Stock = { symbol: string; korName?: string };
 

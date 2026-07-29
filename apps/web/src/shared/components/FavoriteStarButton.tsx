@@ -3,7 +3,7 @@ import {
   addFavoriteStock,
   fetchFavoriteStocks,
   removeFavoriteStock,
-} from "../../features/favoriteStock/api/FavoriteStock";
+} from "../../features/favoriteStock/api/favoriteStock";
 
 export interface FavoriteStarButtonProps {
   symbol?: string;
