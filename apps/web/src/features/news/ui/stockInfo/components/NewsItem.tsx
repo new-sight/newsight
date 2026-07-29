@@ -42,7 +42,7 @@ export default function NewsItem({
     : [];
 
   return (
-    <div className="w-full rounded-xl p-4 bg-gray-600/10 backdrop-blur-md shadow-lg flex flex-col gap-2.5 border border-border/40 hover:border-accent/40 transition-colors">
+    <div className="w-full rounded-xl p-4 bg-gray-600/10 backdrop-blur-md shadow-lg flex flex-col gap-2 border border-border/40 hover:border-accent/40 transition-colors">
       <h3 className="text-lg font-bold text-white leading-snug">
         {news.link ? (
           <a
@@ -62,30 +62,24 @@ export default function NewsItem({
         {news.summary}
       </h4>
 
-      {/* 출간일, 매체, 국가, 카테고리 정보 메타바 */}
-      <div className="flex items-center gap-2 flex-wrap text-xs text-text-muted">
+      {/* 출간일 · 매체 · 국가 · 카테고리 (동일한 text-xs text-text-muted 텍스트 스타일) */}
+      <p className="text-xs text-text-muted flex items-center gap-1.5 flex-wrap">
         {formattedDate && <span>{formattedDate}</span>}
-        {formattedDate && source && <span className="opacity-40">·</span>}
+        {formattedDate && source && <span>·</span>}
         {source && <span>{source}</span>}
-
         {countryLabel && (
           <>
-            <span className="opacity-40">·</span>
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20">
-              {countryLabel}
-            </span>
+            <span>·</span>
+            <span>{countryLabel}</span>
           </>
         )}
-
         {categoryLabel && (
           <>
-            <span className="opacity-40">·</span>
-            <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 font-medium border border-sky-500/20">
-              {categoryLabel}
-            </span>
+            <span>·</span>
+            <span>{categoryLabel}</span>
           </>
         )}
-      </div>
+      </p>
 
       {tagList.length > 0 && (
         <div className="flex gap-2 w-full flex-wrap pt-1">
