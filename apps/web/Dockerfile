@@ -2,9 +2,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# 패키지 의존성 파일 복사 및 설치
-COPY package.json package-lock.json ./
-RUN npm ci
+# 패키지 의존성 파일 복사 및 설치 (package-lock.json 유무와 상관없이 유연하게 설치)
+COPY package.json ./
+COPY package-lock.json* ./
+RUN npm install
 
 # 전체 웹 소스코드 복사 및 빌드 (dist 생성)
 COPY . .
