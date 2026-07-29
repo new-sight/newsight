@@ -1,7 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import logo from "../assets/icons/logo.svg";
 import TickerTape from "./TickerTape";
-import HeaderLoginButton from "../features/login/ui/HeaderLoginButton";
+import HeaderLoginButton from "../features/Login/ui/HeaderLoginButton";
 
 const NAV_ITEMS = [
   { to: "/", label: "대시보드", end: true },

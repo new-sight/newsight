@@ -52,7 +52,8 @@ public class SecurityConfig {
 
                 .requestMatchers(
                     HttpMethod.DELETE,
-                    "/api/news/*/comments/*"
+                    "/api/news/*/comments/*",
+                    "/api/news/*/scrap"
                 ).authenticated()
 
                 // 스크랩 API 인증 필요

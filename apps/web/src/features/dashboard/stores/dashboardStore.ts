@@ -58,8 +58,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
             : item,
         ),
       }));
-    } catch {
-      alert("좋아요 처리에 실패했습니다.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "좋아요 처리에 실패했습니다.");
     }
   },
   toggleScrap: async (newsId) => {
@@ -76,8 +76,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
             : item,
         ),
       }));
-    } catch {
-      alert("스크랩 처리에 실패했습니다.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "스크랩 처리에 실패했습니다.");
     }
   },
   adjustCommentCount: (newsId, delta) =>
