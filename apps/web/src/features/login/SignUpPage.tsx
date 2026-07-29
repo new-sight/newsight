@@ -25,7 +25,8 @@ export default function SignUpPage() {
 
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8080/api/v1/auth/signup", {
+      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${baseUrl}/api/v1/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -47,7 +48,7 @@ export default function SignUpPage() {
     } catch (err) {
       console.error("회원가입 연동 에러:", err);
       alert(
-        "서버 연결에 실패했습니다. 백엔드(8080) 실행 상태를 확인해 주세요.",
+        "서버 연결에 실패했습니다. 백엔드 서버 실행 상태를 확인해 주세요.",
       );
     } finally {
       setLoading(false);
