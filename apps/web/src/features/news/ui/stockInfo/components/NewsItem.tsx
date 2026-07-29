@@ -5,14 +5,14 @@ import CommentSection from "../../../../dashboard/ui/CommentSection";
 
 export default function NewsItem({
   news,
-  onLikeClick,
-  onScrapClick,
-  onCommentCountChange,
+  onLikeClick = () => {},
+  onScrapClick = () => {},
+  onCommentCountChange = () => {},
 }: {
   news: NewsItemData;
-  onLikeClick: (newsId: string) => void;
-  onScrapClick: (newsId: string) => void;
-  onCommentCountChange: (newsId: string, delta: number) => void;
+  onLikeClick?: (newsId: string) => void;
+  onScrapClick?: (newsId: string) => void;
+  onCommentCountChange?: (newsId: string, delta: number) => void;
 }) {
   const [showComments, setShowComments] = useState(false);
 

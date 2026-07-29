@@ -164,7 +164,7 @@ export default function FavoriteStock() {
     newsList,
     loading: newsLoading,
     error: newsError,
-  } = useFavoriteStocksNews(stocks);
+  } = useFavoriteStocksNews(stocks.map((s) => s.symbol));
 
   return (
     <div className="space-y-4 sm:-mt-4 -mx-4 lg:-mx-14">
