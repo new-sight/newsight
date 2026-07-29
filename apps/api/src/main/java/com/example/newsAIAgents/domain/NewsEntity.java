@@ -63,6 +63,14 @@ public class NewsEntity {
     @Column(length = 255)
     private String source;
 
+    @Schema(description = "발행 국가", example = "KOREA")
+    @Column(length = 100)
+    private String country;
+
+    @Schema(description = "뉴스 카테고리", example = "TECHNOLOGY")
+    @Column(length = 100)
+    private String category;
+
     public NewsEntity(String id, String title, String originalTitle, String summary, String link, LocalDateTime createdAt, String tags, LocalDateTime publishedAt, Double sentimentScore, String source) {
         this.id = id;
         this.title = title;

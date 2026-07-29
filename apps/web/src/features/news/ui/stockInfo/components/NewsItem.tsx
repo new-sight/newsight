@@ -2,6 +2,12 @@ import { useState } from "react";
 import type { NewsItemData } from "../../../hooks/GetStockNews";
 import NewsTag from "./NewsTag";
 import CommentSection from "../../../../dashboard/ui/CommentSection";
+import {
+  COUNTRY_LABELS,
+  CATEGORY_LABELS,
+  type Country,
+  type NewsCategory,
+} from "../../../../dashboard/data";
 
 export default function NewsItem({
   news,
@@ -20,6 +26,14 @@ export default function NewsItem({
     ? news.published_at.substring(0, 10)
     : "";
   const source = news.source || "알 수 없음";
+
+  const countryLabel = news.country
+    ? COUNTRY_LABELS[news.country as Country] || news.country
+    : "";
+  const categoryLabel = news.category
+    ? CATEGORY_LABELS[news.category as NewsCategory] || news.category
+    : "";
+
   const tagList = news.tags
     ? news.tags
         .split(",")
@@ -28,7 +42,7 @@ export default function NewsItem({
     : [];
 
   return (
-    <div className="w-full rounded-xl p-4 bg-gray-600/10 backdrop-blur-md shadow-lg flex flex-col gap-2 border border-border/40 hover:border-accent/40 transition-colors">
+    <div className="w-full rounded-xl p-4 bg-gray-600/10 backdrop-blur-md shadow-lg flex flex-col gap-2.5 border border-border/40 hover:border-accent/40 transition-colors">
       <h3 className="text-lg font-bold text-white leading-snug">
         {news.link ? (
           <a
@@ -43,14 +57,38 @@ export default function NewsItem({
           news.title
         )}
       </h3>
+
       <h4 className="text-sm text-text-muted leading-relaxed">
         {news.summary}
       </h4>
-      <p className="text-xs text-text-muted">
-        {formattedDate} · {source}
-      </p>
+
+      {/* 출간일, 매체, 국가, 카테고리 정보 메타바 */}
+      <div className="flex items-center gap-2 flex-wrap text-xs text-text-muted">
+        {formattedDate && <span>{formattedDate}</span>}
+        {formattedDate && source && <span className="opacity-40">·</span>}
+        {source && <span>{source}</span>}
+
+        {countryLabel && (
+          <>
+            <span className="opacity-40">·</span>
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20">
+              {countryLabel}
+            </span>
+          </>
+        )}
+
+        {categoryLabel && (
+          <>
+            <span className="opacity-40">·</span>
+            <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 font-medium border border-sky-500/20">
+              {categoryLabel}
+            </span>
+          </>
+        )}
+      </div>
+
       {tagList.length > 0 && (
-        <div className="flex gap-2 w-full flex-wrap">
+        <div className="flex gap-2 w-full flex-wrap pt-1">
           {tagList.map((tag, idx) => (
             <NewsTag key={idx} tag={tag} />
           ))}
@@ -58,7 +96,7 @@ export default function NewsItem({
       )}
 
       {/* Action Bar (Like, Comment, Link, Scrap) */}
-      <div className="flex items-center gap-3 border-t border-white/10 pt-2.5">
+      <div className="flex items-center gap-3 border-t border-white/10 pt-2.5 mt-1">
         <button
           type="button"
           onClick={() => onLikeClick(news.id)}

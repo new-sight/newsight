@@ -11,6 +11,8 @@ export interface NewsItemData {
   published_at?: string;
   sentiment_score?: number;
   source?: string;
+  country?: string;
+  category?: string;
   likeCount?: number;
   commentCount?: number;
   likedByMe?: boolean;
