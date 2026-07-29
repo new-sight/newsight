@@ -6,8 +6,8 @@ import App from "./App.tsx";
 import DashboardPage from "./features/dashboard/ui/DashboardPage.tsx";
 import PredictionPage from "./features/prediction/PredictionPage.tsx";
 import NewsPage from "./features/news/NewsPage.tsx";
-import LoginPage from "./features/Login/LoginPage.tsx";
-import CreateAccount from "./features/Login/SignUpPage.tsx";
+import LoginPage from "./features/login/LoginPage.tsx";
+import CreateAccount from "./features/login/SignUpPage.tsx";
 import MyPage from "./features/users/MyPage.tsx";
 
 createRoot(document.getElementById("root")!).render(
