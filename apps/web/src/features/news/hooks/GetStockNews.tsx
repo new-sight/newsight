@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { fetchFavoriteNews } from "../../favoriteNews/api/favoriteNews";
 
 export interface NewsItemData {
   id: string;
@@ -31,7 +32,6 @@ export function useGetStockNews(stockCode: string | null | undefined) {
     setLoading(true);
     setError(null);
     try {
-      // Get news list with details from Spring Boot API (queries Neo4j and JPA under the hood)
       const baseUrl = import.meta.env.VITE_API_URL || "";
       const token = localStorage.getItem("accessToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -39,7 +39,21 @@ export function useGetStockNews(stockCode: string | null | undefined) {
         `${baseUrl}/api/news/list/${stockCode}`,
         { headers },
       );
-      setNewsList(response.data);
+
+      let list = response.data;
+      if (token) {
+        try {
+          const scraps = await fetchFavoriteNews();
+          const scrappedSet = new Set(scraps.map((s) => s.id));
+          list = list.map((item) => ({
+            ...item,
+            scrappedByMe: scrappedSet.has(item.id),
+          }));
+        } catch {
+          // ignore scrap fetch error
+        }
+      }
+      setNewsList(list);
     } catch (err: unknown) {
       console.error("[useGetStockNews] Error fetching news:", err);
       let errMsg = "뉴스 데이터를 불러오지 못했습니다.";
