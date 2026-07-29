@@ -1,14 +1,13 @@
 package com.example.scrap.response;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Getter;
 
 @Getter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class FavoriteStockResponse {
-
-    private Long id;
     private String stockCode;
+    private String korName;
+    private String companyName;
     private String createdAt;
 }

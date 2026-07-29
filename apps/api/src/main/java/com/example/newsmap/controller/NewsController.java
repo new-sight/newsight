@@ -93,6 +93,17 @@ public class NewsController {
         return newsScrapService.toggleScrap(newsId, currentLoginId());
     }
 
+    @GetMapping("/scraps")
+    public List<com.example.scrap.response.ScrapNewsResponse> getMyScraps() {
+        return newsScrapService.getMyScraps(currentLoginId());
+    }
+
+    @DeleteMapping("/{newsId}/scrap")
+    public ResponseEntity<Void> removeScrap(@PathVariable String newsId) {
+        newsScrapService.removeScrap(newsId, currentLoginId());
+        return ResponseEntity.noContent().build();
+    }
+
 
     private String currentLoginId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

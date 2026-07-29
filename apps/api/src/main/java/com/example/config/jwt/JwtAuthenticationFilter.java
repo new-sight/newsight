@@ -18,17 +18,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-        String token = resolveToken(request);
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain
+) throws ServletException, IOException {
 
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            Authentication auth = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(auth);
-        }
+    String token = resolveToken(request);
 
-        filterChain.doFilter(request, response);
+    System.out.println("========== JWT FILTER ==========");
+    System.out.println("TOKEN : " + token);
+    System.out.println("VALID : " + jwtTokenProvider.validateToken(token));
+
+
+    if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
+
+        System.out.println(
+        "LOGIN ID : " + jwtTokenProvider.getLoginId(token)
+);
+        Authentication auth = jwtTokenProvider.getAuthentication(token);
+
+        System.out.println("AUTH USER : " + auth.getName());
+
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+    } else {
+
+        System.out.println("JWT INVALID");
+
     }
+
+
+    filterChain.doFilter(request, response);
+}
 
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");

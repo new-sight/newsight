@@ -27,8 +27,8 @@ export default function StockRelatedNews() {
     try {
       const res = await toggleLike(newsId);
       applyLikeResult(newsId, res.liked);
-    } catch {
-      alert("좋아요 처리에 실패했습니다. 로그인이 필요합니다.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "좋아요 처리에 실패했습니다.");
     }
   };
 
@@ -36,8 +36,8 @@ export default function StockRelatedNews() {
     try {
       const res = await toggleScrap(newsId);
       applyScrapResult(newsId, res.scrapped);
-    } catch {
-      alert("스크랩 처리에 실패했습니다. 로그인이 필요합니다.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "스크랩 처리에 실패했습니다.");
     }
   };
 

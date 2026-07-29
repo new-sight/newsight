@@ -2,27 +2,18 @@ package com.example.scrap.domain;
 
 import com.example.auth.domain.User;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
-
 @Entity
-@Table(
-    name = "favorite_stocks",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_stock", columnNames = {"user_id", "stock_code"})
-    }
-)
+@Table(name = "favorite_stocks", uniqueConstraints = @UniqueConstraint(name = "uk_user_stock", columnNames = {"user_id", "stock_code"}))
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class FavoriteStock {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

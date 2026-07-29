@@ -53,6 +53,14 @@ function authHeaders(): Record<string, string> {
     : {};
 }
 
+async function requestError(response: Response, action: string): Promise<Error> {
+  const detail = await response.text();
+  if (response.status === 401 || response.status === 403) {
+    return new Error("로그인이 만료되었거나 필요합니다. 다시 로그인해 주세요.");
+  }
+  return new Error(`${action} (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+}
+
 
 // 뉴스 목록 조회
 export async function fetchNewsList(params: {
@@ -182,7 +190,7 @@ export async function toggleLike(
 
 
   if (!response.ok) {
-    throw new Error("좋아요 처리에 실패했습니다.");
+    throw await requestError(response, "좋아요 처리에 실패했습니다.");
   }
 
 
@@ -196,7 +204,7 @@ export async function toggleScrap(
 ): Promise<ScrapToggleResult> {
 
   const response = await fetch(
-    `${API_BASE_URL}/api/scraps/news/${newsId}`,
+    `${API_BASE_URL}/api/news/${newsId}/scrap`,
     {
       method: "POST",
       headers: authHeaders(),
@@ -205,7 +213,7 @@ export async function toggleScrap(
 
 
   if (!response.ok) {
-    throw new Error("스크랩 처리에 실패했습니다.");
+    throw await requestError(response, "스크랩 처리에 실패했습니다.");
   }
 
 
