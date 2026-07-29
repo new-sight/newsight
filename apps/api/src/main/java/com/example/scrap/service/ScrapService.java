@@ -92,8 +92,14 @@ public class ScrapService {
     // 관심 종목 추가
     // =========================
     public void addFavoriteStock(Long userId, String stockCode) {
-        if (favoriteStockRepository.existsByUserIdAndStockCode(userId, stockCode)) {
-            throw new IllegalArgumentException("이미 등록한 종목입니다.");
+        if (stockCode == null || stockCode.isBlank()) {
+            return;
+        }
+
+        String upperStockCode = stockCode.trim().toUpperCase();
+
+        if (favoriteStockRepository.existsByUserIdAndStockCode(userId, upperStockCode)) {
+            return;
         }
 
         User user = userRepository.findById(userId)
@@ -101,21 +107,24 @@ public class ScrapService {
 
         FavoriteStock favoriteStock = FavoriteStock.builder()
                 .user(user)
-                .stockCode(stockCode)
+                .stockCode(upperStockCode)
                 .build();
 
         favoriteStockRepository.save(favoriteStock);
     }
 
     // =========================
-    // 관심 종목 삭제
+    // 관심 종목 삭제 (대소문자 처리 및 멱등적 안전 삭제)
     // =========================
     public void removeFavoriteStock(Long userId, String stockCode) {
-        FavoriteStock favoriteStock = favoriteStockRepository
-                .findByUserIdAndStockCode(userId, stockCode)
-                .orElseThrow(() -> new IllegalArgumentException("관심 종목이 없습니다."));
+        if (stockCode == null || stockCode.isBlank()) {
+            return;
+        }
 
-        favoriteStockRepository.delete(favoriteStock);
+        String upperStockCode = stockCode.trim().toUpperCase();
+
+        favoriteStockRepository.findByUserIdAndStockCode(userId, upperStockCode)
+                .ifPresent(favoriteStockRepository::delete);
     }
 
     // =========================
