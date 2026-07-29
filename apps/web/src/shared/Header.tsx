@@ -5,7 +5,7 @@ import HeaderLoginButton from "../features/login/ui/HeaderLoginButton";
 
 const NAV_ITEMS = [
   { to: "/", label: "대시보드", end: true },
-  { to: "/prediction", label: "주식 예측" },
+  { to: "/prediction", label: "주식 전망" },
   { to: "/news", label: "관련 뉴스" },
 ];
 

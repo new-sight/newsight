@@ -6,6 +6,11 @@ import NewsItem from "../news/ui/stockInfo/components/NewsItem";
 import FavoriteStockBox from "./ui/FavoriteStockBox";
 import SearchBar, { type SupabaseStockItem } from "./ui/SearchBar";
 import { useFavoriteStocksNews } from "./hooks/useFavoriteStocksNews";
+import {
+  fetchFavoriteStocks,
+  addFavoriteStock,
+  deleteFavoriteStock,
+} from "./api/favoriteStock";
 
 interface FavoriteStockItemProps {
   symbol: string;
@@ -81,15 +86,48 @@ function FavoriteStockItem({
 }
 
 export default function FavoriteStock() {
-  const [stocks, setStocks] = useState<{ symbol: string; korName?: string }[]>([
-    { symbol: "AAPL", korName: "애플" },
-    { symbol: "NVDA", korName: "엔비디아" },
-    { symbol: "TSLA", korName: "테슬라" },
-    { symbol: "MSFT", korName: "마이크로소프트" },
-    { symbol: "AMZN", korName: "아마존" },
-  ]);
+  const [stocks, setStocks] = useState<{ symbol: string; korName?: string }[]>([]);
+  const [loadingBackend, setLoadingBackend] = useState(true);
 
-  const handleAddStock = (symbol: string, korName?: string) => {
+  // 백엔드 API에서 관심 종목 목록 조회
+  useEffect(() => {
+    let isMounted = true;
+    async function loadFavoriteStocks() {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+          const items = await fetchFavoriteStocks();
+          if (isMounted) {
+            setStocks(items.map((item) => ({ symbol: item.stockCode })));
+          }
+        } else {
+          // 비로그인 상태 기본 샘플
+          if (isMounted) {
+            setStocks([
+              { symbol: "AAPL", korName: "애플" },
+              { symbol: "NVDA", korName: "엔비디아" },
+              { symbol: "TSLA", korName: "테슬라" },
+              { symbol: "MSFT", korName: "마이크로소프트" },
+              { symbol: "AMZN", korName: "아마존" },
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("[FavoriteStock] Failed to load favorite stocks from backend:", err);
+      } finally {
+        if (isMounted) {
+          setLoadingBackend(false);
+        }
+      }
+    }
+
+    loadFavoriteStocks();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleAddStock = async (symbol: string, korName?: string) => {
     const targetSymbol = symbol.toUpperCase();
     if (stocks.some((item) => item.symbol === targetSymbol)) {
       alert("이미 등록된 관심 종목입니다.");
@@ -97,10 +135,29 @@ export default function FavoriteStock() {
     }
 
     setStocks((prev) => [...prev, { symbol: targetSymbol, korName }]);
+
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        await addFavoriteStock(targetSymbol);
+      } catch (err) {
+        console.error("[FavoriteStock] Failed to save favorite stock to backend:", err);
+      }
+    }
   };
 
-  const handleRemoveStock = (ticker: string) => {
-    setStocks((prev) => prev.filter((item) => item.symbol !== ticker));
+  const handleRemoveStock = async (ticker: string) => {
+    const targetSymbol = ticker.toUpperCase();
+    setStocks((prev) => prev.filter((item) => item.symbol !== targetSymbol));
+
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        await deleteFavoriteStock(targetSymbol);
+      } catch (err) {
+        console.error("[FavoriteStock] Failed to delete favorite stock from backend:", err);
+      }
+    }
   };
 
   const {
@@ -131,7 +188,16 @@ export default function FavoriteStock() {
       </div>
 
       {/* 종목 카드 그리드 */}
-      {stocks.length === 0 ? (
+      {loadingBackend ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="h-28 rounded-2xl bg-white/5 animate-pulse border border-white/10"
+            />
+          ))}
+        </div>
+      ) : stocks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 p-16 text-center backdrop-blur-sm">
           <span className="material-symbols-outlined text-5xl text-white/20 mb-3">
             show_chart

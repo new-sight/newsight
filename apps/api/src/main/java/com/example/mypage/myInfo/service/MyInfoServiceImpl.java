@@ -6,6 +6,7 @@ import com.example.mypage.myInfo.repository.MyInfoRepository;
 import com.example.newsmap.repository.CommentRepository;
 import com.example.newsmap.repository.NewsLikeRepository;
 import com.example.newsmap.repository.NewsScrapRepository;
+import com.example.scrap.repository.FavoriteStockRepository;
 import com.example.scrap.repository.ScrapRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class MyInfoServiceImpl implements MyInfoService {
     private final NewsLikeRepository newsLikeRepository;
     private final NewsScrapRepository newsScrapRepository;
     private final ScrapRepository scrapRepository;
+    private final FavoriteStockRepository favoriteStockRepository;
 
     @Override
     public MyInfoResponse getMyInfoByUsername(String username) {
@@ -86,6 +88,7 @@ public class MyInfoServiceImpl implements MyInfoService {
         newsLikeRepository.deleteByUser_Id(userId);
         newsScrapRepository.deleteByUser_Id(userId);
         scrapRepository.deleteByUserId(userId);
+        favoriteStockRepository.deleteByUserId(userId);
         myInfoRepository.delete(user);
 
         log.info("[MyInfoService] Deleted account -> ID: {}, LoginId: {}", userId, loginId);

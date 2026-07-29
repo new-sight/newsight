@@ -43,7 +43,9 @@ export default function PredictionPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-heading text-xl font-semibold">주식 예측</h1>
+      <h1 className="font-heading text-xl font-semibold">
+        뉴스에 기반한 주식 전망
+      </h1>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="divide-y divide-border rounded-md border border-border bg-bg-panel">

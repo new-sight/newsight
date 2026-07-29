@@ -41,49 +41,57 @@ public class NewsInferenceServiceImpl implements NewsInferenceService {
 
         log.info("[Weekly LLM Briefing] 4개 트랙 병렬 비동기(CompletableFuture) 분석 및 추론 개시");
 
-        // Track 1: 어제와 오늘의 호재 뉴스 (최근 2일 이내, 감성점수 >= 0.5, 최대 100개 수집)
-        String track1Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+        // Track 1: 어제와 오늘의 호재 뉴스 (최근 2일 이내, 감성점수 >= 0.5, 최신 고유 뉴스 100개 선 선택 후 파생 데이터 최대 300행 제한)
+        String track1Query = "MATCH (n:News) " +
                 "WHERE n.createdAt >= datetime() - duration('P2D') AND n.sentimentScore >= 0.5 " +
+                "WITH n ORDER BY n.createdAt DESC LIMIT 100 " +
+                "MATCH (n)-[:HAS_TAG]->(t:Tag) " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
                 "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
-                "LIMIT 100";
+                "LIMIT 300";
 
-        // Track 2: 지난 일주일간 호재 뉴스 (최근 7일 이내, 감성점수 >= 0.4, 최대 200개 수집)
-        String track2Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+        // Track 2: 지난 일주일간 호재 뉴스 (최근 7일 이내, 감성점수 >= 0.4, 최신 고유 뉴스 200개 선 선택 후 파생 데이터 최대 500행 제한)
+        String track2Query = "MATCH (n:News) " +
                 "WHERE n.createdAt >= datetime() - duration('P7D') AND n.sentimentScore >= 0.4 " +
+                "WITH n ORDER BY n.createdAt DESC LIMIT 200 " +
+                "MATCH (n)-[:HAS_TAG]->(t:Tag) " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
                 "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
-                "LIMIT 200";
+                "LIMIT 500";
 
-        // Track 3: 어제와 오늘의 악재 뉴스 (최근 2일 이내, 감성점수 <= -0.5, 최대 100개 수집)
-        String track3Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+        // Track 3: 어제와 오늘의 악재 뉴스 (최근 2일 이내, 감성점수 <= -0.5, 최신 고유 뉴스 100개 선 선택 후 파생 데이터 최대 300행 제한)
+        String track3Query = "MATCH (n:News) " +
                 "WHERE n.createdAt >= datetime() - duration('P2D') AND n.sentimentScore <= -0.5 " +
+                "WITH n ORDER BY n.createdAt DESC LIMIT 100 " +
+                "MATCH (n)-[:HAS_TAG]->(t:Tag) " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
                 "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
-                "LIMIT 100";
+                "LIMIT 300";
 
-        // Track 4: 지난 일주일간 악재 뉴스 (최근 7일 이내, 감성점수 <= -0.4, 최대 200개 수집)
-        String track4Query = "MATCH (n:News)-[:HAS_TAG]->(t:Tag) " +
+        // Track 4: 지난 일주일간 악재 뉴스 (최근 7일 이내, 감성점수 <= -0.4, 최신 고유 뉴스 200개 선 선택 후 파생 데이터 최대 500행 제한)
+        String track4Query = "MATCH (n:News) " +
                 "WHERE n.createdAt >= datetime() - duration('P7D') AND n.sentimentScore <= -0.4 " +
+                "WITH n ORDER BY n.createdAt DESC LIMIT 200 " +
+                "MATCH (n)-[:HAS_TAG]->(t:Tag) " +
                 "OPTIONAL MATCH (t)-[r:SUBSIDIARY_OF|SUPPLIES_TO|PARTNER_WITH|COMPETE_WITH|RELATED_TO]-(otherTag:Tag) " +
                 "OPTIONAL MATCH (s:Stock) WHERE s.name = t.name OR s.kor_name = t.name OR s.name = otherTag.name OR s.kor_name = otherTag.name " +
                 "RETURN n.title AS newsTitle, n.summary AS newsSummary, n.sentimentScore AS sentimentScore, " +
                 "       n.country AS country, n.category AS category, n.source AS source, " +
                 "       t.name AS tagName, type(r) AS relationType, otherTag.name AS relatedTagName, " +
                 "       coalesce(s.kor_name, s.name) AS stockName, s.ticker AS stockTicker " +
-                "LIMIT 200";
+                "LIMIT 500";
 
         // 4개 트랙 병렬 비동기 수행 (CompletableFuture)
         java.util.concurrent.CompletableFuture<List<Map<String, Object>>> future1 = processTrackAsync(

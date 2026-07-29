@@ -1,44 +1,50 @@
 services:
+  # 1. 프론트엔드 컨테이너 (React + Nginx)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: news-ai-web
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    networks:
+      - app-network
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-var:/var/www/certbot:ro
+
+  # 2. 백엔드 컨테이너 (Spring Boot API)
   api:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
     container_name: news-ai-api
     restart: always
+    expose:
+      - "8080"
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:8080"
     depends_on:
       - redis
-    volumes:
-      # [선택 1] 로컬 개발 환경: mkcert 등으로 생성한 외부 인증서를 주입하려면 주석을 해제하세요.
-      # - ./certs/localhost.crt:/etc/nginx/ssl/server.crt:ro
-      # - ./certs/localhost.key:/etc/nginx/ssl/server.key:ro
-
-      # [선택 2] 운영 환경: Let's Encrypt 인증서 마운트 (최초 발급 성공 시 아래 두 줄의 주석을 푸세요)
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      # - /etc/letsencrypt/live/butterflyeffect.o-r.kr/fullchain.pem:/etc/nginx/ssl/server.crt:ro
-      # - /etc/letsencrypt/live/butterflyeffect.o-r.kr/privkey.pem:/etc/nginx/ssl/server.key:ro
-      - certbot-var:/var/www/certbot:ro
+    networks:
+      - app-network
     environment:
-      # Neo4j
       - NEO4J_URI=${NEO4J_URI}
       - NEO4J_USERNAME=${NEO4J_USERNAME}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
-      # Ollama Cloud
       - OLLAMA_API_URL=${OLLAMA_API_URL}
       - OLLAMA_API_KEY=${OLLAMA_API_KEY}
       - OLLAMA_MODEL_NAME=${OLLAMA_MODEL_NAME}
-      # PostgreSQL (Supabase)
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USERNAME=${DATABASE_USERNAME}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      # Redis (내부 Docker Compose 네트워크의 redis 서비스 지정)
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      # Alpha Vantage
       - ALPHAVANTAGE_API_KEY=${ALPHAVANTAGE_API_KEY}
-      # CORS
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
     logging:
       driver: "json-file"
@@ -46,18 +52,17 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # 3. 인메모리 캐시 컨테이너 (Redis)
   redis:
     image: redis:alpine
     container_name: news-ai-redis
     restart: always
+    networks:
+      - app-network
     ports:
       - "6379:6379"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
 
+  # 4. SSL 자동 갱신 컨테이너 (Certbot)
   certbot:
     image: certbot/certbot
     container_name: news-ai-certbot
@@ -65,8 +70,11 @@ services:
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
       - certbot-var:/var/www/certbot
-    # 12시간마다 인증서 자동 갱신 체크를 수행하도록 무한 루프 설정
     entrypoint: "/bin/sh -c 'trap exit 0; SIGTERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   certbot-var:

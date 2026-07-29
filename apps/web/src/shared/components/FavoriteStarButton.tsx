@@ -1,4 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  addFavoriteStock,
+  deleteFavoriteStock,
+  checkFavoriteStock,
+} from "../../features/favoriteStock/api/favoriteStock";
 
 export interface FavoriteStarButtonProps {
   symbol?: string;
@@ -19,6 +24,29 @@ export default function FavoriteStarButton({
 }: FavoriteStarButtonProps) {
   const [isStarred, setIsStarred] = useState(initialStarred);
 
+  useEffect(() => {
+    setIsStarred(initialStarred);
+  }, [initialStarred]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (symbol && localStorage.getItem("accessToken")) {
+      checkFavoriteStock(symbol)
+        .then((starred) => {
+          if (isMounted) setIsStarred(starred);
+        })
+        .catch((err) => {
+          console.error(
+            "[FavoriteStarButton] Failed to check favorite state:",
+            err,
+          );
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [symbol]);
+
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const nextState = !isStarred;
@@ -31,10 +59,18 @@ export default function FavoriteStarButton({
       onRemove();
     }
 
-    try {
-      // TODO: 관심 종목 토글 처리 API 또는 커스텀 비즈니스 로직 작성
-    } catch (err) {
-      console.error("관심 종목 처리 중 오류 발생:", err);
+    if (symbol && localStorage.getItem("accessToken")) {
+      try {
+        if (nextState) {
+          await addFavoriteStock(symbol);
+        } else {
+          await deleteFavoriteStock(symbol);
+        }
+      } catch (err) {
+        console.error("관심 종목 처리 중 오류 발생:", err);
+        // 실패 시 UI 원상 복구
+        setIsStarred(!nextState);
+      }
     }
   };
 
