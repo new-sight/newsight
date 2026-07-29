@@ -146,7 +146,9 @@ export default function FavoriteStock() {
       applyLikeResult(newsId, result.liked);
     } catch (error) {
       alert(
-        error instanceof Error ? error.message : "좋아요 처리에 실패했습니다.",
+        error instanceof Error
+          ? error.message
+          : "좋아요 처리에 실패했습니다.",
       );
     }
   };
@@ -157,7 +159,9 @@ export default function FavoriteStock() {
       applyScrapResult(newsId, result.scrapped);
     } catch (error) {
       alert(
-        error instanceof Error ? error.message : "스크랩 처리에 실패했습니다.",
+        error instanceof Error
+          ? error.message
+          : "스크랩 처리에 실패했습니다.",
       );
     }
   };

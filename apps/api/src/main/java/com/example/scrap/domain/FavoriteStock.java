@@ -16,10 +16,12 @@ public class FavoriteStock {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 관심 종목 등록한 사용자
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // STOCK 테이블의 stock_code(FK)
     @Column(name = "stock_code", nullable = false, length = 20)
     private String stockCode;
 

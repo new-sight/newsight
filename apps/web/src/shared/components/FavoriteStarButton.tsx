@@ -27,7 +27,7 @@ export default function FavoriteStarButton({
 
   useEffect(() => setIsStarred(initialStarred), [initialStarred]);
   useEffect(() => {
-    if (!symbol || !localStorage.getItem("accessToken")) return;
+    if (!symbol) return;
     let active = true;
     fetchFavoriteStocks()
       .then((stocks) => {
