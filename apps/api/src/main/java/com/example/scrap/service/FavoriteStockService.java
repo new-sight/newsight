@@ -56,7 +56,6 @@ public class FavoriteStockService {
         return favoriteStockRepository.findByUserId(userId)
                 .stream()
                 .map(fs -> FavoriteStockResponse.builder()
-                        .id(fs.getId())
                         .stockCode(fs.getStockCode())
                         .createdAt(fs.getCreatedAt() != null ? fs.getCreatedAt().toString() : null)
                         .build())
