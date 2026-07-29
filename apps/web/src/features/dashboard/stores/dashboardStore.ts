@@ -3,14 +3,14 @@ import { fetchNewsList, toggleLike, toggleScrap, type NewsListItem } from "../ap
 import type { Country, NewsCategory } from "../data";
 
 type DashboardStore = {
-  categoryFilter: NewsCategory | "all";
-  countryFilter: Country | "all";
+  categoryFilter: NewsCategory[];
+  countryFilter: Country[];
   page: number;
   news: NewsListItem[];
   totalCount: number;
   requestId: number;
-  setCategoryFilter: (value: NewsCategory | "all") => void;
-  setCountryFilter: (value: Country | "all") => void;
+  setCategoryFilter: (value: NewsCategory[]) => void;
+  setCountryFilter: (value: Country[]) => void;
   setPage: (page: number) => void;
   fetchNews: () => Promise<void>;
   toggleLike: (newsId: string) => Promise<void>;
@@ -19,8 +19,8 @@ type DashboardStore = {
 };
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
-  categoryFilter: "all",
-  countryFilter: "all",
+  categoryFilter: [],
+  countryFilter: [],
   page: 0,
   news: [],
   totalCount: 0,
@@ -34,8 +34,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     set({ requestId: nextRequestId });
 
     const response = await fetchNewsList({
-      country: countryFilter === "all" ? undefined : countryFilter,
-      category: categoryFilter === "all" ? undefined : categoryFilter,
+      country: countryFilter.length ? countryFilter : undefined,
+      category: categoryFilter.length ? categoryFilter : undefined,
       page,
       size: 5,
     });
